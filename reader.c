@@ -4,6 +4,7 @@
 
 
 #include <stdio.h>
+#include	<ctype.h>
 #include "h.h"
 
 
@@ -20,7 +21,7 @@ char *			msg;
 	fprintf(stderr, "%s: ", myname);
 	fprintf(stderr, msg, a1, a2, a3);
 	if (lineno)
-		fprintf(stderr, " on line %d", lineno);
+		fprintf(stderr, " near line %d", lineno);
 	fputc('\n', stderr);
 	exit(1);
 }

@@ -11,21 +11,33 @@
  *	-r Don't not use inbuilt rules
  *	-s Make silently
  *	-t Touch files instead of making them
- *	-m Change memory requirements
+ *	-m Change memory requirements (EON only)
  */
 
 #include <stdio.h>
-#include <sys/stat.h>
-#include <sys/err.h>
 #include "h.h"
 
+#ifdef unix
+#include <sys/errno.h>
+#endif
+#ifdef eon
+#include <sys/err.h>
+#endif
+#ifdef os9
+#include <errno.h>
+#endif
 
+
+#ifdef eon
 #define MEMSPACE	(16384)
+#endif
 
 
 char *			myname;
 char *			makefile;	/*  The make file  */
+#ifdef eon
 unsigned		memspace = MEMSPACE;
+#endif
 
 FILE *			ifd;		/*  Input file desciptor  */
 bool			domake = TRUE;	/*  Go through the motions option  */
@@ -39,11 +51,11 @@ bool			quest = FALSE;	/*  Question up-to-dateness of file  */
 
 void
 main(argc, argv)
-char **			argv;
 int			argc;
+char **			argv;
 {
-	register char *		p;	/*  For argument processing  */
-	int			estat;	/*  For question  */
+	register char *		p;		/*  For argument processing  */
+	int			estat = 0;	/*  For question  */
 	register struct name *	np;
 
 
@@ -67,6 +79,7 @@ int			argc;
 				}
 				makefile = p;
 				goto end_of_args;
+#ifdef eon
 			case 'm':	/*  Change space requirements  */
 				if (*++p == '\0')
 				{
@@ -76,6 +89,7 @@ int			argc;
 				}
 				memspace = atoi(p);
 				goto end_of_args;
+#endif
 			case 'n':	/*  Pretend mode  */
 				domake = FALSE;
 				break;
@@ -104,8 +118,10 @@ int			argc;
 	end_of_args:;
 	}
 
+#ifdef eon
 	if (initalloc(memspace) == 0xffff)  /*  Must get memory for alloc  */
 		fatal("Cannot initalloc memory");
+#endif
 
 	if (strcmp(makefile, "-") == 0)	/*  Can use stdin as makefile  */
 		ifd = stdin;
@@ -113,11 +129,21 @@ int			argc;
 		if (!makefile)		/*  If no file, then use default */
 		{
 			if ((ifd = fopen(DEFN1, "r")) == (FILE *)0)
+#ifdef eon
 				if (errno != ER_NOTF)
 					fatal("Can't open %s; error %02x", DEFN1, errno);
+#endif
+#ifdef unix
+				if (errno != ENOENT)
+					fatal("Can't open %s; error %02x", DEFN1, errno);
+#endif
+#ifndef os9
 			if ((ifd == (FILE *)0)
 				  && ((ifd = fopen(DEFN2, "r")) == (FILE *)0))
 				fatal("Can't open %s", DEFN2);
+#else
+				fatal("Can't open %s", DEFN1);
+#endif
 		}
 		else
 			if ((ifd = fopen(makefile, "r")) == (FILE *)0)
@@ -157,9 +183,6 @@ int			argc;
 
 	precious();
 
-	if (!domake)
-		silent = FALSE;
-
 	if (!firstname)
 		fatal("No targets defined");
 
@@ -189,12 +212,11 @@ usage()
 
 
 void
-fatal(msg, a1, a2, a3)
+fatal(msg, a1, a2, a3, a4, a5, a6)
 char	*msg;
 {
 	fprintf(stderr, "%s: ", myname);
-	fprintf(stderr, msg, a1, a2, a3);
+	fprintf(stderr, msg, a1, a2, a3, a4, a5, a6);
 	fputc('\n', stderr);
 	exit(1);
 }
-

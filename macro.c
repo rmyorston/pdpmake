@@ -105,7 +105,10 @@ char *			buf;
 		else
 		{
 			q = buf;
-			if (*++rp == '(')
+			if (*++rp == '{')
+				while (*++rp && *rp != '}')
+					*q++ = *rp;
+			else if (*rp == '(')
 				while (*++rp && *rp != ')')
 					*q++ = *rp;
 			else if (!*rp)

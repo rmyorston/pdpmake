@@ -1,14 +1,11 @@
 # Makefile for make!
-.SUFFIXES:	.obj
-
-.c.obj:
-	c -c $(CFLAGS) $<
 
 
-OBJS	=	check.obj input.obj macro.obj main.obj \
-		make.obj reader.obj rules.obj
+
+OBJS	=	check.o input.o macro.o main.o \
+		make.o reader.o rules.o
 
 m:		$(OBJS)
-	c -a 4000h -o m $(OBJS)
+	cc -o m $(OBJS)
 
 $(OBJS):	h.h

@@ -4,7 +4,13 @@
 
 
 #ifndef uchar
+#ifdef os9
+#define uchar		char
+#define void		int
+#define fputc		putc
+#else
 #define uchar		unsigned char
+#endif
 #endif
 
 #define bool		uchar
@@ -14,7 +20,13 @@
 #define max(a,b)	((a)>(b)?(a):(b))
 
 #define DEFN1		"makefile"		/*  Default names  */
+#ifdef unix
 #define DEFN2		"Makefile"
+#endif
+#ifdef eon
+#define DEFN2		"Makefile"
+#endif
+/* os9 is case insensitive */
 
 #define LZ		(1024)			/*  Line size  */
 
@@ -37,6 +49,7 @@ struct name
 #define N_DONE		0x02			/* Name looked at */
 #define N_TARG		0x04			/* Name is a target */
 #define N_PREC		0x08			/* Target is precious */
+#define N_DOUBLE	0x10			/* Double colon target */
 
 /*
  *	Definition of a target line.

@@ -4,6 +4,7 @@
 
 
 #include <stdio.h>
+#include	<ctype.h>
 #include "h.h"
 
 
@@ -129,10 +130,20 @@ struct cmd *		cp;
 
 /*
  *	Add a new 'line' of stuff to a target.  This check to see
- *	if commands already exist for the target.
+ *	if commands already exist for the target.  If flag is set,
+ *	the line is a double colon target.
+ *
+ *	Kludges:
+ *	i)  If the new name begins with a '.', and there are no dependents,
+ *	    then the target must cease to be a target.  This is for .SUFFIXES.
+ *	ii) If the new name begins with a '.', with no dependents and has
+ *	    commands, then replace the current commands.  This is for
+ *	    redefining commands for a default rule.
+ *	Neither of these free the space used by dependents or commands,
+ *	since they could be used by another target.
  */
 void
-newline(np, dp, cp)
+newline(np, dp, cp, flag)
 struct name *		np;
 struct depend *		dp;
 struct cmd *		cp;
@@ -142,6 +153,20 @@ struct cmd *		cp;
 	register struct line *	rrp;
 
 
+	/* Handle the .SUFFIXES case */
+	if (np->n_name[0] == '.' && !dp && !cp)
+	{
+		for (rp = np->n_line; rp; rp = rrp)
+		{
+			rrp = rp->l_next;
+			free(rp);
+		}
+		np->n_line = (struct line *)0;
+		np->n_flag &= ~N_TARG;
+		return;
+	}
+
+	/* This loop must happen since rrp is used later. */
 	for
 	(
 		rp = np->n_line, rrp = (struct line *)0;
@@ -151,8 +176,18 @@ struct cmd *		cp;
 		if (rp->l_cmd)
 			hascmds = TRUE;
 
-	if (hascmds && cp)
-		error("Commands defined twice for target %s", np->n_name);
+	if (hascmds && cp && !(np->n_flag & N_DOUBLE))
+		/* Handle the implicit rules redefinition case */
+		if (np->n_name[0] == '.' && dp == (struct depend *)0)
+		{
+			np->n_line->l_cmd = cp;
+			return;
+		}
+		else
+			error("Commands defined twice for target %s", np->n_name);
+	if (np->n_flag & N_TARG)
+		if (!(np->n_flag & N_DOUBLE) != !flag)		/* like xor */
+			error("Inconsistent rules for target %s", np->n_name);
 
 	if ((rp = (struct line *)malloc(sizeof (struct line)))
 				== (struct line *)0)
@@ -167,6 +202,8 @@ struct cmd *		cp;
 		np->n_line = rp;
 
 	np->n_flag |= N_TARG;
+	if (flag)
+		np->n_flag |= N_DOUBLE;
 }
 
 
@@ -183,6 +220,7 @@ FILE *			fd;
 	struct name *		np;
 	struct depend *		dp;
 	struct cmd *		cp;
+	bool			dbl;
 
 
 	if (getline(str1, fd))	/*  Read the first line  */
@@ -190,7 +228,11 @@ FILE *			fd;
 
 	for(;;)
 	{
+#ifdef os9
+		if (*str1 == ' ')	/*  Rules without targets  */
+#else
 		if (*str1 == '\t')	/*  Rules without targets  */
+#endif
 			error("Rules not allowed here");
 
 		p = str1;
@@ -249,6 +291,14 @@ FILE *			fd;
 
 		*q++ = '\0';	/*  Separate targets and dependents  */
 
+		if (*q == ':')		/* Double colon */
+		{
+			dbl = 1;
+			q++;
+		}
+		else
+			dbl = 0;
+
 		for (dp = (struct depend *)0; ((p = gettok(&q)) != (char *)0);)
 					/*  get list of dep's */
 		{
@@ -262,7 +312,11 @@ FILE *			fd;
 		cp = (struct cmd *)0;
 		if (getline(str2, fd) == FALSE)		/*  Get commands  */
 		{
+#ifdef os9
+			while (*str2 == ' ')
+#else
 			while (*str2 == '\t')
+#endif
 			{
 				cp = newcmd(&str2[0], cp);
 				if (getline(str2, fd))
@@ -273,8 +327,8 @@ FILE *			fd;
 		while ((p = gettok(&q)) != (char *)0)	/* Get list of targ's */
 		{
 			np = newname(p);		/*  Intern name  */
-			newline(np, dp, cp);
-			if (!firstname)
+			newline(np, dp, cp, dbl);
+			if (!firstname && p[0] != '.')
 				firstname = np;
 		}
 

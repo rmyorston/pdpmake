@@ -27,7 +27,12 @@ prt()
 
 	for (np = namehead.n_next; np; np = np->n_next)
 	{
-		fprintf(stderr, "%s:\n", np->n_name);
+		if (np->n_flag & N_DOUBLE)
+			fprintf(stderr, "%s::\n", np->n_name);
+		else
+			fprintf(stderr, "%s:\n", np->n_name);
+		if (np == firstname)
+			fprintf(stderr, "(MAIN NAME)\n");
 		for (lp = np->n_line; lp; lp = lp->l_next)
 		{
 			fputc(':', stderr);
@@ -36,7 +41,11 @@ prt()
 			fputc('\n', stderr);
 
 			for (cp = lp->l_cmd; cp; cp = cp->c_next)
+#ifdef os9
+				fprintf(stderr, "-   %s\n", cp->c_cmd);
+#else
 				fprintf(stderr, "-\t%s\n", cp->c_cmd);
+#endif
 			fputc('\n', stderr);
 		}
 		fputc('\n', stderr);
