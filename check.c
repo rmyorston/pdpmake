@@ -1,115 +1,102 @@
 /*
- *	Check structures for make.
+ * Check structures for make.
  */
+#include "make.h"
 
-#include <stdio.h>
-#include "h.h"
-
-
-/*
- *	Prints out the structures as defined in memory.  Good for check
- *	that you make file does what you want (and for debugging make).
- */
-void
-prt()
+static void
+print_name(struct name *np)
 {
-	register struct name *		np;
-	register struct depend *	dp;
-	register struct line *		lp;
-	register struct cmd *		cp;
-	register struct macro *		mp;
+	if (np == firstname)
+		printf("# default target\n");
+	printf("%s:", np->n_name);
+	if ((np->n_flag & N_DOUBLE))
+		putchar(':');
+}
 
+static void
+print_prerequisites(struct rule *rp)
+{
+	struct depend *dp;
+
+	for (dp = rp->r_dep; dp; dp = dp->d_next)
+		printf(" %s", dp->d_name->n_name);
+}
+
+static void
+print_commands(struct rule *rp)
+{
+	struct cmd *cp;
+
+	for (cp = rp->r_cmd; cp; cp = cp->c_next)
+		printf("\t%s\n", cp->c_cmd);
+}
+
+void
+print_details(void)
+{
+	struct macro *mp;
+	struct name *np;
+	struct rule *rp;
 
 	for (mp = macrohead; mp; mp = mp->m_next)
-		fprintf(stderr, "%s = %s\n", mp->m_name, mp->m_val);
+		printf("%s = %s\n", mp->m_name, mp->m_val);
+	putchar('\n');
 
-	fputc('\n', stderr);
+	for (np = namehead; np; np = np->n_next) {
+		if (!(np->n_flag & N_DOUBLE)) {
+			print_name(np);
+			for (rp = np->n_rule; rp; rp = rp->r_next) {
+				print_prerequisites(rp);
+			}
+			putchar('\n');
 
-	for (np = namehead.n_next; np; np = np->n_next)
-	{
-		if (np->n_flag & N_DOUBLE)
-			fprintf(stderr, "%s::\n", np->n_name);
-		else
-			fprintf(stderr, "%s:\n", np->n_name);
-		if (np == firstname)
-			fprintf(stderr, "(MAIN NAME)\n");
-		for (lp = np->n_line; lp; lp = lp->l_next)
-		{
-			fputc(':', stderr);
-			for (dp = lp->l_dep; dp; dp = dp->d_next)
-				fprintf(stderr, " %s", dp->d_name->n_name);
-			fputc('\n', stderr);
+			for (rp = np->n_rule; rp; rp = rp->r_next) {
+				print_commands(rp);
+			}
+			putchar('\n');
+		} else {
+			for (rp = np->n_rule; rp; rp = rp->r_next) {
+				print_name(np);
+				print_prerequisites(rp);
+				putchar('\n');
 
-			for (cp = lp->l_cmd; cp; cp = cp->c_next)
-#ifdef os9
-				fprintf(stderr, "-   %s\n", cp->c_cmd);
-#else
-				fprintf(stderr, "-\t%s\n", cp->c_cmd);
-#endif
-			fputc('\n', stderr);
+				print_commands(rp);
+				putchar('\n');
+			}
 		}
-		fputc('\n', stderr);
 	}
 }
 
-
-/*
- *	Recursive routine that does the actual checking.
- */
-void
-check(np)
-struct name *		np;
+/* Recursive routine that does the actual checking. */
+static void
+check(struct name *np)
 {
-	register struct depend *	dp;
-	register struct line *		lp;
-
+	struct rule *rp;
+	struct depend *dp;
 
 	if (np->n_flag & N_MARK)
-		fatal("Circular dependency from %s", np->n_name);
+		error("circular dependency from %s", np->n_name);
 
 	np->n_flag |= N_MARK;
 
-	for (lp = np->n_line; lp; lp = lp->l_next)
-		for (dp = lp->l_dep; dp; dp = dp->d_next)
+	for (rp = np->n_rule; rp; rp = rp->r_next)
+		for (dp = rp->r_dep; dp; dp = dp->d_next)
 			check(dp->d_name);
 
 	np->n_flag &= ~N_MARK;
 }
 
-
 /*
- *	Look for circular dependancies.
- *	ie.
- *		a: b
- *		b: a
- *	is a circular dep
+ * Look for circular dependencies.  For example,
+ *    a: b
+ *    b: a
+ * is a circular dependency.
  */
 void
-circh()
+cycle_check(void)
 {
-	register struct name *	np;
+	struct name *np;
 
-
-	for (np = namehead.n_next; np; np = np->n_next)
+	for (np = namehead; np; np = np->n_next)
 		check(np);
-}
-
-
-/*
- *	Check the target .PRECIOUS, and mark its dependentd as precious
- */
-void
-precious()
-{
-	register struct depend *	dp;
-	register struct line *		lp;
-	register struct name *		np;
-
-
-	if (!((np = newname(".PRECIOUS"))->n_flag & N_TARG))
-		return;
-
-	for (lp = np->n_line; lp; lp = lp->l_next)
-		for (dp = lp->l_dep; dp; dp = dp->d_next)
-			dp->d_name->n_flag |= N_PREC;
 }

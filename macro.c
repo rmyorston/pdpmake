@@ -1,156 +1,64 @@
 /*
- *	Macro control for make
+ * Macro control for make
  */
+#include "make.h"
 
-
-#include "h.h"
-
-
-struct macro *		macrohead;
-
+struct macro *macrohead;
 
 struct macro *
-getmp(name)
-char *			name;
+getmp(const char *name)
 {
-	register struct macro *	rp;
+	struct macro *mp;
 
-	for (rp = macrohead; rp; rp = rp->m_next)
-		if (strcmp(name, rp->m_name) == 0)
-			return rp;
-	return (struct macro *)0;
+	for (mp = macrohead; mp; mp = mp->m_next)
+		if (strcmp(name, mp->m_name) == 0)
+			return mp;
+	return NULL;
 }
 
-
-char *
-getmacro(name)
-char *			name;
+void
+setmacro(const char *name, const char *val, int level)
 {
-	struct macro *		mp;
+	struct macro *mp;
+	const char *s;
 
-	if (mp = getmp(name))
-		return mp->m_val;
-	else
-		return "";
-}
-
-
-struct macro *
-setmacro(name, val)
-char *			name;
-char *			val;
-{
-	register struct macro *	rp;
-	register char *		cp;
-
-
-			/*  Replace macro definition if it exists  */
-	for (rp = macrohead; rp; rp = rp->m_next)
-		if (strcmp(name, rp->m_name) == 0)
-		{
-			free(rp->m_val);	/*  Free space from old  */
-			break;
+	for (s = name; *s; ++s) {
+		if (*s == '=' || isspace(*s)) {
+			error("invalid macro name");
 		}
-
-	if (!rp)		/*  If not defined, allocate space for new  */
-	{
-		if ((rp = (struct macro *)malloc(sizeof (struct macro)))
-					 == (struct macro *)0)
-			fatal("No memory for macro");
-
-		rp->m_next = macrohead;
-		macrohead = rp;
-		rp->m_flag = FALSE;
-
-		if ((cp = malloc(strlen(name)+1)) == (char *)0)
-			fatal("No memory for macro");
-		strcpy(cp, name);
-		rp->m_name = cp;
 	}
 
-	if ((cp = malloc(strlen(val)+1)) == (char *)0)
-		fatal("No memory for macro");
-	strcpy(cp, val);		/*  Copy in new value  */
-	rp->m_val = cp;
+	mp = getmp(name);
+	if (mp) {
+		// Don't replace existing macro from a lower level
+		if (level > mp->m_level)
+			return;
 
-	return rp;
-}
-
-
-/*
- *	Do the dirty work for expand
- */
-void
-doexp(to, from, len, buf)
-char **			to;
-char *			from;
-int *			len;
-char *			buf;
-{
-	register char *		rp;
-	register char *		p;
-	register char *		q;
-	register struct macro *	mp;
-
-
-	rp = from;
-	p = *to;
-	while (*rp)
-	{
-		if (*rp != '$')
-		{
-			*p++ = *rp++;
-			(*len)--;
-		}
-		else
-		{
-			q = buf;
-			if (*++rp == '{')
-				while (*++rp && *rp != '}')
-					*q++ = *rp;
-			else if (*rp == '(')
-				while (*++rp && *rp != ')')
-					*q++ = *rp;
-			else if (!*rp)
-			{
-				*p++ = '$';
-				break;
-			}
-			else
-				*q++ = *rp;
-			*q = '\0';
-			if (*rp)
-				rp++;
-			if (!(mp = getmp(buf)))
-				mp = setmacro(buf, "");
-			if (mp->m_flag)
-				fatal("Infinitely recursive macro %s", mp->m_name);
-			mp->m_flag = TRUE;
-			*to = p;
-			doexp(to, mp->m_val, len, buf);
-			p = *to;
-			mp->m_flag = FALSE;
-		}
-		if (*len <= 0)
-			error("Expanded line too line");
+		// Replace existing macro
+		free(mp->m_val);
+	} else {
+		// If not defined, allocate space for new
+		mp = xmalloc(sizeof(struct macro));
+		mp->m_next = macrohead;
+		macrohead = mp;
+		mp->m_flag = FALSE;
+		mp->m_name = xstrdup(name);
+		mp->m_level = level;
 	}
-	*p = '\0';
-	*to = p;
+	mp->m_val = xstrdup(val ? val : "");
 }
 
-
-/*
- *	Expand any macros in str.
- */
+#if ENABLE_FEATURE_CLEAN_UP
 void
-expand(str)
-char *		str;
+freemacros(void)
 {
-	static char		a[LZ];
-	static char		b[LZ];
-	char *			p = str;
-	int			len = LZ-1;
+	struct macro *mp, *nextmp;
 
-	strcpy(a, str);
-	doexp(&p, a, &len, b);
+	for (mp = macrohead; mp; mp = nextmp) {
+		nextmp = mp->m_next;
+		free(mp->m_name);
+		free(mp->m_val);
+		free(mp);
+	}
 }
+#endif

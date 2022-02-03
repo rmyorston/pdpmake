@@ -1,234 +1,165 @@
 /*
- *	Control of the implicit suffix rules
+ * Control of the implicit suffix rules
  */
-
-
-#include "h.h"
-
+#include "make.h"
 
 /*
- *	Return a pointer to the suffix of a name
+ * Return a pointer to the suffix of a name (which may be the
+ * terminating NUL if there's no suffix).
  */
 char *
-suffix(name)
-char *			name;
+suffix(const char *name)
 {
-	return rindex(name, '.');
+	char *p = strrchr(name, '.');
+	return p ? p : (char *)name + strlen(name);
 }
 
+/*
+ * Find a name structure whose name is formed by concatenating two
+ * strings.  If 'create' is TRUE the name is created if necessary.
+ */
+static struct name *
+namecat(const char *s, const char *t, int create)
+{
+	char *p;
+	struct name *np;
+
+	p = xconcat3(s, t, "");
+	np = create ? newname(p) : findname(p);
+	free(p);
+	return np;
+}
 
 /*
- *	Dynamic dependency.  This routine applies the suffis rules
- *	to try and find a source and a set of rules for a missing
- *	target.  If found, np is made into a target with the implicit
- *	source name, and rules.  Returns TRUE if np was made into
- *	a target.
+ * Dynamic dependency.  This routine applies the suffix rules
+ * to try and find a source and a set of rules for a missing
+ * target.  If found, np is made into a target with the implicit
+ * source name and rules.  For single colon rules this is done by
+ * adding a new rule; double colon rules are temporarily modified
+ * in-place.
  */
-bool
-dyndep(np)
-struct name *		np;
+struct name *
+dyndep(struct name *np, struct rule *implicit)
 {
-	register char *		p;
-	register char *		q;
-	register char *		suff;		/*  Old suffix  */
-	register char *		basename;	/*  Name without suffix  */
-	struct name *		op;		/*  New dependent  */
-	struct name *		sp;		/*  Suffix  */
-	struct line *		lp;
-	struct depend *		dp;
-	char *			newsuff;
+	char *suff, *newsuff;
+	char *base, *name, *member;
+	struct name *xp;		// Suffixes
+	struct name *sp;		// Suffix rule
+	struct name *pp = NULL;	// Implicit prerequisite
+	struct rule *rp;
+	struct depend *dp;
 
+	member = NULL;
+	name = splitlib(np->n_name, &member);
 
-	p = str1;
-	q = np->n_name;
-	if (!(suff = suffix(q)))
-		return FALSE;		/* No suffix */
-	while (q < suff)
-		*p++ = *q++;
-	*p = '\0';
-	basename = setmacro("*", str1)->m_val;
+	suff = xstrdup(suffix(name));
+	base = member ? member : name;
+	*suffix(base) = '\0';
 
-	if (!((sp = newname(".SUFFIXES"))->n_flag & N_TARG))
-		return FALSE;
-
-	for (lp = sp->n_line; lp; lp = lp->l_next)
-		for (dp = lp->l_dep; dp; dp = dp->d_next)
-		{
+	xp = newname(".SUFFIXES");
+	for (rp = xp->n_rule; rp; rp = rp->r_next) {
+		for (dp = rp->r_dep; dp; dp = dp->d_next) {
+			// Generate new suffix rule to try
 			newsuff = dp->d_name->n_name;
-			if (strlen(suff)+strlen(newsuff)+1 >= LZ)
-				fatal("Suffix rule too long");
-			p = str1;
-			q = newsuff;
-			while (*p++ = *q++)
-				;
-			p--;
-			q = suff;
-			while (*p++ = *q++)
-				;
-			sp = newname(str1);
-			if (sp->n_flag & N_TARG)
-			{
-				p = str1;
-				q = basename;
-				if (strlen(basename) + strlen(newsuff)+1 >= LZ)
-					fatal("Implicit name too long");
-				while (*p++ = *q++)
-					;
-				p--;
-				q = newsuff;
-				while (*p++ = *q++)
-					;
-				op = newname(str1);
-				if (!op->n_time)
-					modtime(op);
-				if (op->n_time)
-				{
-					dp = newdep(op, 0);
-					newline(np, dp, sp->n_line->l_cmd, 0);
-					setmacro("<", op->n_name);
-					return TRUE;
+			sp = namecat(newsuff, suff, FALSE);
+			if (sp && sp->n_rule) {
+				// Generate a name for an implicit prerequisite
+				pp = namecat(base, newsuff, TRUE);
+				if (!pp->n_time)
+					modtime(pp);
+				if (pp->n_time) {
+					dp = newdep(pp, NULL);
+					if (implicit) {
+						dp->d_next = implicit->r_dep;
+						implicit->r_dep = dp;
+						implicit->r_cmd = sp->n_rule->r_cmd;
+					} else {
+						addrule(np, dp, sp->n_rule->r_cmd, FALSE);
+					}
+					goto finish;
 				}
 			}
 		}
-	return FALSE;
+	}
+ finish:
+	free(suff);
+	free(name);
+	return pp;
 }
 
+#define RULES \
+	".SUFFIXES:.o .c .y .l .a .sh .f\n" \
+	".c.o:\n" \
+	"	$(CC) $(CFLAGS) -c $<\n" \
+	".f.o:\n" \
+	"	$(FC) $(FFLAGS) -c $<\n" \
+	".y.o:\n" \
+	"	$(YACC) $(YFLAGS) $<\n" \
+	"	$(CC) $(CFLAGS) -c y.tab.c\n" \
+	"	rm -f y.tab.c\n" \
+	"	mv y.tab.o $@\n" \
+	".y.c:\n" \
+	"	$(YACC) $(YFLAGS) $<\n" \
+	"	mv y.tab.c $@\n" \
+	".l.o:\n" \
+	"	$(LEX) $(LFLAGS) $<\n" \
+	"	$(CC) $(CFLAGS) -c lex.yy.c\n" \
+	"	rm -f lex.yy.c\n" \
+	"	mv lex.yy.o $@\n" \
+	".l.c:\n" \
+	"	$(LEX) $(LFLAGS) $<\n" \
+	"	mv lex.yy.c $@\n" \
+	".c.a:\n" \
+	"	$(CC) -c $(CFLAGS) $<\n" \
+	"	$(AR) $(ARFLAGS) $@ $*.o\n" \
+	"	rm -f $*.o\n" \
+	".f.a:\n" \
+	"	$(FC) -c $(FFLAGS) $<\n" \
+	"	$(AR) $(ARFLAGS) $@ $*.o\n" \
+	"	rm -f $*.o\n" \
+	".c:\n" \
+	"	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $<\n" \
+	".f:\n" \
+	"	$(FC) $(FFLAGS) $(LDFLAGS) -o $@ $<\n" \
+	".sh:\n" \
+	"	cp $< $@\n" \
+	"	chmod a+x $@\n"
+
+#define MACROS \
+	"MAKE=make\n" \
+	"CC=c99\n" \
+	"CFLAGS=-O1\n" \
+	"FC=fort77\n" \
+	"FFLAGS=-O1\n" \
+	"YACC=yacc\n" \
+	"YFLAGS=\n" \
+	"LEX=lex\n" \
+	"LFLAGS=\n" \
+	"AR=ar\n" \
+	"ARFLAGS=-rv\n" \
+	"LDFLAGS=\n"
 
 /*
- *	Make the default rules
+ * Read the built-in rules using a fake fgets-like interface.
  */
-void
-makerules()
+char *
+getrules(char *s, int size)
 {
-	struct cmd *		cp;
-	struct name *		np;
-	struct depend *		dp;
+	char *r;
+	static const char *pos = NULL;
 
+	if (pos == NULL)
+		pos = (RULES MACROS) + (norules ? sizeof(RULES) - 1 : 0);
 
-#ifdef eon
-	setmacro("BDSCC", "asm");
-	/*	setmacro("BDSCFLAGS", "");	*/
-	cp = newcmd("$(BDSCC) $(BDSCFLAGS) -n $<", 0);
-	np = newname(".c.o");
-	newline(np, 0, cp, 0);
+	if (*pos == '\0')
+		return NULL;
 
-	setmacro("CC", "c");
-	setmacro("CFLAGS", "-O");
-	cp = newcmd("$(CC) $(CFLAGS) -c $<", 0);
-	np = newname(".c.obj");
-	newline(np, 0, cp, 0);
-
-	setmacro("M80", "asm -n");
-	/*	setmacro("M80FLAGS", "");	*/
-	cp = newcmd("$(M80) $(M80FLAGS) $<", 0);
-	np = newname(".mac.o");
-	newline(np, 0, cp, 0);
-
-	setmacro("AS", "zas");
-	/*	setmacro("ASFLAGS", "");	*/
-	cp = newcmd("$(ZAS) $(ASFLAGS) -o $@ $<", 0);
-	np = newname(".as.obj");
-	newline(np, 0, cp, 0);
-
-	np = newname(".as");
-	dp = newdep(np, 0);
-	np = newname(".obj");
-	dp = newdep(np, dp);
-	np = newname(".c");
-	dp = newdep(np, dp);
-	np = newname(".o");
-	dp = newdep(np, dp);
-	np = newname(".mac");
-	dp = newdep(np, dp);
-	np = newname(".SUFFIXES");
-	newline(np, dp, 0, 0);
-#endif
-
-/*
- *	Some of the UNIX implicit rules
- */
-#ifdef unix
-	setmacro("CC", "cc");
-	setmacro("CFLAGS", "-O");
-	cp = newcmd("$(CC) $(CFLAGS) -c $<", 0);
-	np = newname(".c.o");
-	newline(np, 0, cp, 0);
-
-	setmacro("AS", "as");
-	cp = newcmd("$(AS) -o $@ $<", 0);
-	np = newname(".s.o");
-	newline(np, 0, cp, 0);
-
-	setmacro("YACC", "yacc");
-	/*	setmacro("YFLAGS", "");	*/
-	cp = newcmd("$(YACC) $(YFLAGS) $<", 0);
-	cp = newcmd("mv y.tab.c $@", cp);
-	np = newname(".y.c");
-	newline(np, 0, cp, 0);
-
-	cp = newcmd("$(YACC) $(YFLAGS) $<", 0);
-	cp = newcmd("$(CC) $(CFLAGS) -c y.tab.c", cp);
-	cp = newcmd("rm y.tab.c", cp);
-	cp = newcmd("mv y.tab.o $@", cp);
-	np = newname(".y.o");
-	newline(np, 0, cp, 0);
-
-	np = newname(".s");
-	dp = newdep(np, 0);
-	np = newname(".o");
-	dp = newdep(np, dp);
-	np = newname(".c");
-	dp = newdep(np, dp);
-	np = newname(".y");
-	dp = newdep(np, dp);
-	np = newname(".SUFFIXES");
-	newline(np, dp, 0, 0);
-#endif
-#ifdef os9
-/*
- *	Fairlight use an enhanced version of the C sub-system.
- *	They have a specialised macro pre-processor.
- */
-	setmacro("CC", "cc");
-	setmacro("CFLAGS", "-z");
-	cp = newcmd("$(CC) $(CFLAGS) -r $<", 0);
-
-	np = newname(".c.r");
-	newline(np, 0, cp, 0);
-	np = newname(".ca.r");
-	newline(np, 0, cp, 0);
-	np = newname(".a.r");
-	newline(np, 0, cp, 0);
-	np = newname(".o.r");
-	newline(np, 0, cp, 0);
-	np = newname(".mc.r");
-	newline(np, 0, cp, 0);
-	np = newname(".mca.r");
-	newline(np, 0, cp, 0);
-	np = newname(".ma.r");
-	newline(np, 0, cp, 0);
-	np = newname(".mo.r");
-	newline(np, 0, cp, 0);
-
-	np = newname(".r");
-	dp = newdep(np, 0);
-	np = newname(".mc");
-	dp = newdep(np, dp);
-	np = newname(".mca");
-	dp = newdep(np, dp);
-	np = newname(".c");
-	dp = newdep(np, dp);
-	np = newname(".ca");
-	dp = newdep(np, dp);
-	np = newname(".ma");
-	dp = newdep(np, dp);
-	np = newname(".mo");
-	dp = newdep(np, dp);
-	np = newname(".o");
-	dp = newdep(np, dp);
-	np = newname(".a");
-	dp = newdep(np, dp);
-	np = newname(".SUFFIXES");
-	newline(np, dp, 0, 0);
-#endif
+	r = s;
+	while (--size) {
+		*s++ = *pos;
+		if (*pos++ == '\n')
+			break;
+	}
+	*s = '\0';
+	return r;
 }

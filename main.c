@@ -1,222 +1,393 @@
 /*
- *	make [-f makefile] [-ins] [target(s) ...]
+ * make [-f makefile] [-eiknpqrsSt] [macro=val ...] [target ...]
  *
- *	(Better than EON mk but not quite as good as UNIX make)
- *
- *	-f makefile name
- *	-i ignore exit status
- *	-n Pretend to make
- *	-p Print all macros & targets
- *	-q Question up-to-dateness of target.  Return exit status 1 if not
- *	-r Don't not use inbuilt rules
- *	-s Make silently
- *	-t Touch files instead of making them
- *	-m Change memory requirements (EON only)
+ *  -f  Makefile name
+ *  -e  Environment variables override macros in makefiles
+ *  -i  Ignore exit status
+ *  -k  Continue on error
+ *  -n  Pretend to make
+ *  -p  Print all macros & targets
+ *  -q  Question up-to-dateness of target.  Return exit status 1 if not
+ *  -r  Don't use inbuilt rules
+ *  -s  Make silently
+ *  -S  Stop on error
+ *  -t  Touch files instead of making them
  */
+#include "make.h"
 
-#include <stdio.h>
-#include "h.h"
-
-#ifdef unix
-#include <sys/errno.h>
-#endif
-#ifdef eon
-#include <sys/err.h>
-#endif
-#ifdef os9
-#include <errno.h>
+uint32_t opts;
+const char *myname;
+const char *makefile;
+struct cmd *makefiles;
+#if ENABLE_FEATURE_MAKE_EXTENSIONS
+bool posix = FALSE;
+bool first_line;
 #endif
 
-
-#ifdef eon
-#define MEMSPACE	(16384)
-#endif
-
-
-char *			myname;
-char *			makefile;	/*  The make file  */
-#ifdef eon
-unsigned		memspace = MEMSPACE;
-#endif
-
-FILE *			ifd;		/*  Input file desciptor  */
-bool			domake = TRUE;	/*  Go through the motions option  */
-bool			ignore = FALSE;	/*  Ignore exit status option  */
-bool			silent = FALSE;	/*  Silent option  */
-bool			print = FALSE;	/*  Print debuging information  */
-bool			rules = TRUE;	/*  Use inbuilt rules  */
-bool			dotouch = FALSE;/*  Touch files instead of making  */
-bool			quest = FALSE;	/*  Question up-to-dateness of file  */
-
-
-void
-main(argc, argv)
-int			argc;
-char **			argv;
+static void
+usage(void)
 {
-	register char *		p;		/*  For argument processing  */
-	int			estat = 0;	/*  For question  */
-	register struct name *	np;
+	fprintf(stderr,
+		"Usage: %s [-f makefile] [-eiknpqrsSt] [macro=val ...] [target ...]\n",
+		myname);
+	exit(2);
+}
 
+/*
+ * Process options from an argv array.  If from_env is non-zero we're
+ * handling options from MAKEFLAGS so skip '-f' and '-p'.
+ */
+static uint32_t
+process_options(int argc, char **argv, int from_env)
+{
+	int opt;
+	uint32_t flags = 0;
 
-	myname = (argc-- < 1) ? "make" : *argv++;
-
-	while ((argc > 0) && (**argv == '-'))
-	{
-		argc--;		/*  One less to process  */
-		p = *argv++;	/*  Now processing this one  */
-
-		while (*++p != '\0')
-		{
-			switch(*p)
-			{
-			case 'f':	/*  Alternate file name  */
-				if (*++p == '\0')
-				{
-					if (argc-- <= 0)
-						usage();
-					p = *argv++;
-				}
-				makefile = p;
-				goto end_of_args;
-#ifdef eon
-			case 'm':	/*  Change space requirements  */
-				if (*++p == '\0')
-				{
-					if (argc-- <= 0)
-						usage();
-					p = *argv++;
-				}
-				memspace = atoi(p);
-				goto end_of_args;
-#endif
-			case 'n':	/*  Pretend mode  */
-				domake = FALSE;
-				break;
-			case 'i':	/*  Ignore fault mode  */
-				ignore = TRUE;
-				break;
-			case 's':	/*  Silent about commands  */
-				silent = TRUE;
-				break;
-			case 'p':
-				print = TRUE;
-				break;
-			case 'r':
-				rules = FALSE;
-				break;
-			case 't':
-				dotouch = TRUE;
-				break;
-			case 'q':
-				quest = TRUE;
-				break;
-			default:	/*  Wrong option  */
-				usage();
+	while ((opt = getopt(argc, argv, OPTSTR1 OPTSTR2)) != -1) {
+		switch(opt) {
+		case 'f':	// Alternate file name
+			if (!from_env) {
+				makefiles = newcmd(optarg, makefiles);
+				flags |= OPT_f;
 			}
+			break;
+		case 'e':	// Prefer env vars to macros in makefiles
+			flags |= OPT_e;
+			break;
+		case 'i':	// Ignore fault mode
+			flags |= OPT_i;
+			break;
+		case 'k':	// Continue on error
+			flags |= OPT_k;
+			flags &= ~OPT_S;
+			break;
+		case 'n':	// Pretend mode
+			flags |= OPT_n;
+			break;
+		case 'p':
+			if (!from_env)
+				flags |= OPT_p;
+			break;
+		case 'q':
+			flags |= OPT_q;
+			break;
+		case 'r':
+			flags |= OPT_r;
+			break;
+		case 't':
+			flags |= OPT_t;
+			break;
+		case 's':	// Silent about commands
+			flags |= OPT_s;
+			break;
+		case 'S':	// Stop on error
+			flags |= OPT_S;
+			flags &= ~OPT_k;
+			break;
+		default:
+			if (from_env)
+				error("invalid MAKEFLAGS");
+			else
+				usage();
 		}
-	end_of_args:;
+	}
+	return flags;
+}
+
+/*
+ * Split the contents of MAKEFLAGS into an argv array.  If the return
+ * value (call it fargv) isn't NULL the caller should free fargv[1] and
+ * fargv.
+ */
+static char **
+expand_makeflags(int *fargc)
+{
+	const char *m, *makeflags = getenv("MAKEFLAGS");
+	char *p, *argstr;
+	int argc;
+	char **argv;
+
+	if (makeflags == NULL)
+		return NULL;
+
+	while (isblank(*makeflags))
+		makeflags++;
+
+	if (*makeflags == '\0')
+		return NULL;
+
+	p = argstr = xmalloc(strlen(makeflags) + 2);
+
+	// If MAKEFLAGS doesn't start with a hyphen, doesn't look like
+	// a macro definition and only contains valid option characters,
+	// add a hyphen.
+	argc = 3;
+	if (makeflags[0] != '-' && strchr(makeflags, '=') == NULL) {
+		if (strspn(makeflags, OPTSTR1) != strlen(makeflags))
+			error("invalid MAKEFLAGS");
+		*p++ = '-';
+	} else {
+		// MAKEFLAGS may need to be split, estimate size of argv array.
+		for (m = makeflags; *m; ++m) {
+			if (isblank(*m))
+				argc++;
+		}
 	}
 
-#ifdef eon
-	if (initalloc(memspace) == 0xffff)  /*  Must get memory for alloc  */
-		fatal("Cannot initalloc memory");
-#endif
+	argv = xmalloc(argc * sizeof(char *));
+	argc = 0;
+	argv[argc++] = (char *)myname;
+	argv[argc++] = argstr;
 
-	if (strcmp(makefile, "-") == 0)	/*  Can use stdin as makefile  */
-		ifd = stdin;
-	else
-		if (!makefile)		/*  If no file, then use default */
-		{
-			if ((ifd = fopen(DEFN1, "r")) == (FILE *)0)
-#ifdef eon
-				if (errno != ER_NOTF)
-					fatal("Can't open %s; error %02x", DEFN1, errno);
-#endif
-#ifdef unix
-				if (errno != ENOENT)
-					fatal("Can't open %s; error %02x", DEFN1, errno);
-#endif
-#ifndef os9
-			if ((ifd == (FILE *)0)
-				  && ((ifd = fopen(DEFN2, "r")) == (FILE *)0))
-				fatal("Can't open %s", DEFN2);
-#else
-				fatal("Can't open %s", DEFN1);
-#endif
+	// Copy MAKEFLAGS into argstr, splitting at non-escaped blanks.
+	m = makeflags;
+	do {
+		if (*m == '\\' && m[1] != '\0')
+			m++;	// Skip backslash, copy next character unconditionally.
+		else if (isblank(*m)) {
+			// Terminate current argument and start a new one.
+			*p++ = '\0';
+			argv[argc++] = p;
+			do {
+				m++;
+			} while (isblank(*m));
+			continue;
 		}
-		else
-			if ((ifd = fopen(makefile, "r")) == (FILE *)0)
-				fatal("Can't open %s", makefile);
+		*p++ = *m++;
+	} while (*m != '\0');
+	*p = '\0';
+	argv[argc] = NULL;
 
-	makerules();
+	*fargc = argc;
+	return argv;
+}
 
-	setmacro("$", "$");
+/*
+ * Instantiate all macros in an argv-style array of pointers.  Stop
+ * processing at the first string that doesn't contain an equal sign.
+ */
+static char **
+process_macros(char **argv, int level)
+{
+	char *p;
 
-	while (argc && (p = index(*argv, '=')))
-	{
-		char		c;
-
-		c = *p;
+	while (*argv && (p = strchr(*argv, '=')) != NULL) {
 		*p = '\0';
-		setmacro(*argv, p+1);
-		*p = c;
+		if (level != 3 || (strcmp(*argv, "MAKEFLAGS") != 0 &&
+				strcmp(*argv, "SHELL") != 0))
+			setmacro(*argv, p+1, level);
+		*p = '=';
 
 		argv++;
-		argc--;
+	}
+	return argv;
+}
+
+/*
+ * Update the MAKEFLAGS macro and environment variable to include any
+ * command line options that don't have their default value (apart from
+ * -f, -p and -S).  Also add any macros defined on the command line or
+ * by the MAKEFLAGS environment variable (apart from MAKEFLAGS itself).
+ * Add macros that were defined on the command line to the environment.
+ */
+static void
+update_makeflags(void)
+{
+	int i;
+	char optbuf[sizeof(OPTSTR1) + 1];
+	char *makeflags = NULL;
+	char *macro, *s, *t;
+	struct macro *mp;
+
+	s = optbuf;
+	*s++ = '-';
+	for (i = 0; i < sizeof(OPTSTR1) - 1; i++) {
+		if ((opts & OPT_MASK & (1 << i)))
+			*s++ = OPTSTR1[i];
+	}
+	*s = '\0';
+
+	if (optbuf[1])
+		makeflags = xstrdup(optbuf);
+
+	for (mp = macrohead; mp; mp = mp->m_next) {
+		if ((mp->m_level == 1 || mp->m_level == 2) &&
+				strcmp(mp->m_name, "MAKEFLAGS") != 0) {
+			macro = xmalloc(strlen(mp->m_name) + 2 * strlen(mp->m_val) + 1);
+			s = stpcpy(macro, mp->m_name);
+			*s++ = '=';
+			for (t = mp->m_val; *t; t++) {
+				if (*t == '\\' || isblank(*t))
+					*s++ = '\\';
+				*s++ = *t;
+			}
+			*s = '\0';
+
+			makeflags = xappendword(makeflags, macro);
+			free(macro);
+
+			// Add command line macro definitions to the environment
+			if (mp->m_level == 1 && strcmp(mp->m_name, "SHELL") != 0)
+				setenv(mp->m_name, mp->m_val, 1);
+		}
 	}
 
-	input(ifd);	/*  Input all the gunga  */
-	fclose(ifd);	/*  Finished with makefile  */
-	lineno = 0;	/*  Any calls to error now print no line number */
+	if (makeflags) {
+		setmacro("MAKEFLAGS", makeflags, 0);
+		setenv("MAKEFLAGS", makeflags, 1);
+		free(makeflags);
+	}
+}
+
+static void
+make_handler(int sig)
+{
+	signal(sig, SIG_DFL);
+	remove_target();
+	kill(getpid(), sig);
+}
+
+static void
+init_signal(int sig)
+{
+	struct sigaction sa, new_action;
+
+	sigemptyset(&new_action.sa_mask);
+	new_action.sa_flags = 0;
+	new_action.sa_handler = make_handler;
+
+	sigaction(sig, NULL, &sa);
+	if (sa.sa_handler != SIG_IGN)
+		sigaction(sig, &new_action, NULL);
+}
+
+/*
+ * If the global option flag associated with a special target hasn't
+ * been set mark all prerequisites of the target with a flag.  If the
+ * target had no prerequisites set the global option flag.
+ */
+static void
+mark_special(const char *special, uint32_t oflag, uint8_t nflag)
+{
+	struct name *np;
+	struct rule *rp;
+	struct depend *dp;
+	int marked = FALSE;
+
+	if (!(opts & oflag) && (np = findname(special))) {
+		for (rp = np->n_rule; rp; rp = rp->r_next) {
+			for (dp = rp->r_dep; dp; dp = dp->d_next) {
+				dp->d_name->n_flag |= nflag;
+				marked = TRUE;
+			}
+		}
+
+		if (!marked)
+			opts |= oflag;
+	}
+}
+
+int
+main(int argc, char **argv)
+{
+	char **fargv, **fargv0;
+	int fargc, estat;
+	FILE *ifd;
+	struct cmd *mp;
+
+	myname = basename(*argv);
+
+	// Process options from MAKEFLAGS
+	fargv = fargv0 = expand_makeflags(&fargc);
+	if (fargv0) {
+		opts = process_options(fargc, fargv, TRUE);
+		fargv = fargv0 + optind;
+	}
+	optind = 0;
+
+	// Process options from the command line
+	opts |= process_options(argc, argv, FALSE);
+	argv += optind;
+
+	init_signal(SIGHUP);
+	init_signal(SIGTERM);
+
+	setmacro("$", "$", 0);
+	setmacro("SHELL", "/bin/sh", 4);
+
+	// Process macro definitions from the command line
+	argv = process_macros(argv, 1);
+
+	// Process macro definitions from MAKEFLAGS
+	if (fargv) {
+		process_macros(fargv, 2);
+#if ENABLE_FEATURE_CLEAN_UP
+		free(fargv0[1]);
+		free(fargv0);
+#endif
+	}
+
+	// Process macro definitions from the environment
+	process_macros(environ, 3);
+
+	// Update MAKEFLAGS and environment
+	update_makeflags();
+
+	// Read built-in rules
+	input(NULL);
+
+#if ENABLE_FEATURE_MAKE_EXTENSIONS
+	first_line = TRUE;
+#endif
+	mp = makefiles;
+	if (!mp) {	// Look for a default Makefile
+		if ((ifd = fopen("makefile", "r")) != NULL)
+			makefile = "makefile";
+		else if ((ifd = fopen("Makefile", "r")) != NULL)
+			makefile = "Makefile";
+		else
+			error("no makefile found");
+		goto read_makefile;
+	}
+
+	while (mp) {
+		if (strcmp(mp->c_cmd, "-") == 0)	// Can use stdin as makefile
+			ifd = stdin;
+		else if ((ifd = fopen(mp->c_cmd, "r")) == NULL)
+			error("can't open %s: %s", mp->c_cmd, strerror(errno));
+		makefile = mp->c_cmd;
+		mp = mp->c_next;
+ read_makefile:
+		input(ifd);
+		fclose(ifd);
+		makefile = NULL;
+	}
 
 	if (print)
-		prt();	/*  Print out structures  */
+		print_details();
 
-	np = newname(".SILENT");
-	if (np->n_flag & N_TARG)
-		silent = TRUE;
-
-	np = newname(".IGNORE");
-	if (np->n_flag & N_TARG)
-		ignore = TRUE;
-
-	precious();
+	mark_special(".SILENT", OPT_s, N_SILENT);
+	mark_special(".IGNORE", OPT_i, N_IGNORE);
+	mark_special(".PRECIOUS", OPT_precious, N_PRECIOUS);
 
 	if (!firstname)
-		fatal("No targets defined");
+		error("no targets defined");
 
-	circh();	/*  Check circles in target definitions  */
+	cycle_check();	// Check for cyclical dependencies in definitions
 
-	if (!argc)
+	estat = 0;
+	if (*argv == NULL) {
 		estat = make(firstname, 0);
-	else while (argc--)
-	{
-		if (!print && !silent && strcmp(*argv, "love") == 0)
-			printf("Not war!\n");
-		estat |= make(newname(*argv++), 0);
+	} else {
+		while (*argv != NULL)
+			estat |= make(newname(*argv++), 0);
 	}
 
-	if (quest)
-		exit(estat);
-	else
-		exit(0);
-}
+#if ENABLE_FEATURE_CLEAN_UP
+	freenames();
+	freemacros();
+	freecmds(makefiles);
+#endif
 
-
-usage()
-{
-	fprintf(stderr, "Usage: %s [-f makefile] [-inpqrst] [macro=val ...] [target(s) ...]\n", myname);
-	exit(1);
-}
-
-
-void
-fatal(msg, a1, a2, a3, a4, a5, a6)
-char	*msg;
-{
-	fprintf(stderr, "%s: ", myname);
-	fprintf(stderr, msg, a1, a2, a3, a4, a5, a6);
-	fputc('\n', stderr);
-	exit(1);
+	return estat;
 }

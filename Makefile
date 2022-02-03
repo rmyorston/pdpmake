@@ -1,11 +1,11 @@
 # Makefile for make!
 
+OBJS = check.o input.o macro.o main.o make.o modtime.o rules.o target.o utils.o
 
+make: $(OBJS)
+	$(CC) -o make $(OBJS)
 
-OBJS	=	check.o input.o macro.o main.o \
-		make.o reader.o rules.o
+$(OBJS): make.h
 
-m:		$(OBJS)
-	cc -o m $(OBJS)
-
-$(OBJS):	h.h
+clean:
+	rm -f $(OBJS) make
