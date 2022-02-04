@@ -35,17 +35,23 @@ gettok(char **ptr)
 }
 
 /*
- * Skip over (possibly nested) macro expansions.
+ * Skip over (possibly adjacent or nested) macro expansions.
  */
 static char *
 skip_macro(const char *s)
 {
-	if (s[0] == '$' && (s[1] == '(' || s[1] == '{')) {
-		char end = *++s == '(' ? ')' : '}';
-		while (*s && *s != end)
-			s = skip_macro(s + 1);
-		if (*s == end)
-			++s;
+	while (*s && s[0] == '$') {
+		if (s[1] == '(' || s[1] == '{') {
+			char end = *++s == '(' ? ')' : '}';
+			while (*s && *s != end)
+				s = skip_macro(s + 1);
+			if (*s == end)
+				++s;
+		} else if (s[1] != '\0') {
+			s += 2;
+		} else {
+			break;
+		}
 	}
 	return (char *)s;
 }
