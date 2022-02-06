@@ -122,19 +122,34 @@ expand_macros(const char *str)
 			if (t[1] == '\0') {
 				break;
 			}
-			// Need to expand a macro, get its name.  Nested expansions
-			// aren't processed, just removed.
+			// Need to expand a macro, get its name.
 			s = t;
 			q = name = xmalloc(strlen(t));
 			t++;
 			if (*t == '{' || *t == '(') {
 				char end = *t == '{' ? '}' : ')';
+				// Skip over nested expansions
 				while ((t = skip_macro(t + 1)) && *t && *t != end) {
 					*q++ = *t;
 				}
+#if ENABLE_FEATURE_MAKE_EXTENSIONS
+				// Expand nested macros if not in POSIX mode.
+				if (!posix && t - s - 2 != q - name) {
+					// Literal length of name not equal to length after
+					// skipping expansions: there are nested expansions.
+					free(name);
+					q = xstrndup(s + 2, t - s - 2);
+					name = expand_macros(q);
+					free(q);
+					goto macro_done;
+				}
+#endif
 			} else
 				*q++ = *t;
 			*q = '\0';
+#if ENABLE_FEATURE_MAKE_EXTENSIONS
+ macro_done:
+#endif
 			if (!*t)
 				error("unterminated variable '%s'", name);
 

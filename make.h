@@ -180,4 +180,5 @@ void *xmalloc(size_t len);
 void *xrealloc(void *ptr, size_t len);
 char *xconcat3(const char *s1, const char *s2, const char *s3);
 char *xstrdup(const char *s);
+char *xstrndup(const char *s, size_t n);
 char *xappendword(const char *str, const char *word);

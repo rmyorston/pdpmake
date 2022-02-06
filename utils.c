@@ -74,11 +74,21 @@ xconcat3(const char *s1, const char *s2, const char *s3)
 	return strcat(strcat(strcpy(t, s1), s2), s3);
 }
 
-char *xstrdup(const char *s)
+char *
+xstrdup(const char *s)
 {
 	size_t len = strlen(s) + 1;
 	char *t = xmalloc(len);
 	return memcpy(t, s, len);
+}
+
+char *
+xstrndup(const char *s, size_t n)
+{
+	char *t = strndup(s, n);
+	if (t == NULL)
+		error("out of memory");
+	return t;
 }
 
 /*
