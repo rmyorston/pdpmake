@@ -106,13 +106,31 @@ modify_words(const char *val, int modifier, const char *find, const char *repl)
 }
 
 /*
+ * Return a pointer to the next instance of a given character.  Macro
+ * expansions are skipped so the ':' and '=' in $(VAR:.s1=.s2) aren't
+ * detected as separators for rules or macro definitions.
+ */
+static char *
+find_char(const char *str, int c)
+{
+	const char *s;
+
+	for (s = skip_macro(str); *s; s = skip_macro(s + 1)) {
+		if (*s == c)
+			return (char *)s;
+	}
+	return NULL;
+}
+
+/*
  * Recursively expand any macros in str to an allocated string.
  */
 char *
 expand_macros(const char *str)
 {
-	char *exp, *newexp, *s, *t, *q, *name;
-	char *find, *replace, *modified, *expansion;
+	char *exp, *newexp, *s, *t, *p, *q, *name;
+	char *find, *replace, *modified;
+	char *expval, *expfind, *exprepl;
 	char modifier;
 	struct macro *mp;
 
@@ -122,45 +140,44 @@ expand_macros(const char *str)
 			if (t[1] == '\0') {
 				break;
 			}
-			// Need to expand a macro, get its name.
+			// Need to expand a macro.  Find its extent (s to t inclusive)
+			// and take a copy of its content.
 			s = t;
-			q = name = xmalloc(strlen(t));
 			t++;
 			if (*t == '{' || *t == '(') {
-				char end = *t == '{' ? '}' : ')';
-				// Skip over nested expansions
-				while ((t = skip_macro(t + 1)) && *t && *t != end) {
-					*q++ = *t;
-				}
-#if ENABLE_FEATURE_MAKE_EXTENSIONS
-				// Expand nested macros if not in POSIX mode.
-				if (!posix && t - s - 2 != q - name) {
-					// Literal length of name not equal to length after
-					// skipping expansions: there are nested expansions.
-					free(name);
-					q = xstrndup(s + 2, t - s - 2);
-					name = expand_macros(q);
-					free(q);
-					goto macro_done;
-				}
-#endif
-			} else
-				*q++ = *t;
-			*q = '\0';
-#if ENABLE_FEATURE_MAKE_EXTENSIONS
- macro_done:
-#endif
-			if (!*t)
-				error("unterminated variable '%s'", name);
-
-			// Suffix replacement only happens if both ':' and '=' are found.
-			replace = NULL;
-			if ((find = strchr(name, ':'))) {
-				if ((replace = strchr(find + 1, '='))) {
-					*find++ = '\0';
-					*replace++ = '\0';
-				}
+				t = find_char(t, *t == '{' ? '}' : ')');
+				if (t == NULL)
+					error("unterminated variable '%s'", s);
+				name = xstrndup(s + 2, t - s - 2);
+			} else {
+				name = xmalloc(2);
+				name[0] = *t;
+				name[1] = '\0';
 			}
+
+			// Only do suffix replacement if both ':' and '=' are found.
+			expfind = exprepl = NULL;
+			if ((find = find_char(name, ':')) &&
+					(replace = find_char(find, '='))) {
+				*find++ = '\0';
+				*replace++ = '\0';
+				expfind = expand_macros(find);
+				exprepl = expand_macros(replace);
+			}
+
+			p = q = name;
+#if ENABLE_FEATURE_MAKE_EXTENSIONS
+			// If not in POSIX mode expand macros in the name.
+			if (!posix) {
+				char *expname = expand_macros(name);
+				free(name);
+				name = expname;
+			} else
+#endif
+			// Skip over nested expansions in name
+			do {
+				*q++ = *p;
+			} while ((p = skip_macro(p + 1)) && *p);
 
 			// The internal macros support 'D' and 'F' modifiers
 			modifier = '\0';
@@ -173,27 +190,32 @@ expand_macros(const char *str)
 				break;
 			}
 
-			expansion = NULL;
+			modified = NULL;
 			if ((mp = getmp(name)))  {
 				// Recursive expansion
 				if (mp->m_flag)
-					error("recursive macro %s", mp->m_name);
+					error("recursive macro %s", name);
 
-				modified = modify_words(mp->m_val, modifier, find, replace);
 				mp->m_flag = TRUE;
-				expansion = expand_macros(modified ? modified : mp->m_val);
-				free(modified);
+				expval = expand_macros(mp->m_val);
 				mp->m_flag = FALSE;
+				modified = modify_words(expval, modifier, expfind, exprepl);
+				if (modified)
+					free(expval);
+				else
+					modified = expval;
 			}
 			free(name);
+			free(expfind);
+			free(exprepl);
 
-			if (expansion && *expansion) {
+			if (modified && *modified) {
 				// The text to be replaced by the macro expansion is
 				// from s to t inclusive.
 				*s = '\0';
-				newexp = xconcat3(exp, expansion, t + 1);
+				newexp = xconcat3(exp, modified, t + 1);
 				free(exp);
-				t = newexp + (s - exp) + strlen(expansion) - 1;
+				t = newexp + (s - exp) + strlen(modified) - 1;
 				exp = newexp;
 			} else {
 				// Macro wasn't expanded or expanded to nothing.
@@ -203,7 +225,7 @@ expand_macros(const char *str)
 				while ((*s++ = *q++))
 					continue;
 			}
-			free(expansion);
+			free(modified);
 		}
 	}
 	return exp;
@@ -508,23 +530,6 @@ process_command(char *s)
 	}
 	*t = '\0';
 	return s;
-}
-
-/*
- * Return a pointer to the next instance of a given character.  Macro
- * expansions are skipped so the ':' and '=' in $(VAR:.s1=.s2) aren't
- * detected as separators for rules or macro definitions.
- */
-static char *
-find_char(const char *str, int c)
-{
-	const char *s;
-
-	for (s = skip_macro(str); *s; s = skip_macro(s + 1)) {
-		if (*s == c)
-			return (char *)s;
-	}
-	return NULL;
 }
 
 /*
