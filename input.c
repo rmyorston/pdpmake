@@ -413,6 +413,12 @@ readline(FILE *fd)
 		}
 		lineno++;
 
+		// Remove CR before LF
+		if (p != str && p[-1] == '\r') {
+			p[-1] = '\n';
+			*p-- = '\0';
+		}
+
 		// Keep going if newline has been escaped
 		if (p != str && p[-1] == '\\') {
 			pos = p - str + 1;
