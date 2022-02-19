@@ -370,13 +370,12 @@ main(int argc, char **argv)
 	mark_special(".IGNORE", OPT_i, N_IGNORE);
 	mark_special(".PRECIOUS", OPT_precious, N_PRECIOUS);
 
-	if (!firstname)
-		error("no targets defined");
-
 	cycle_check();	// Check for cyclical dependencies in definitions
 
 	estat = 0;
 	if (*argv == NULL) {
+		if (!firstname)
+			error("no targets defined");
 		estat = make(firstname, 0);
 	} else {
 		while (*argv != NULL)
