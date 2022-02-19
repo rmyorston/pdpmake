@@ -88,6 +88,7 @@ dyndep(struct name *np, struct rule *implicit)
 					}
 					goto finish;
 				}
+				pp = NULL;
 			}
 		}
 	}
