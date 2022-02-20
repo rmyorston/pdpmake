@@ -161,7 +161,7 @@ int make(struct name *np, int level);
 char *splitlib(const char *name, char **member);
 void modtime(struct name *np);
 char *suffix(const char *name);
-struct name *dyndep(struct name *np, struct rule *implicit);
+struct name *dyndep(struct name *np, struct rule *imprule);
 char *getrules(char *s, int size);
 struct name *findname(const char *name);
 struct name *newname(const char *name);

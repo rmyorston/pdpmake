@@ -33,13 +33,12 @@ namecat(const char *s, const char *t, int create)
 /*
  * Dynamic dependency.  This routine applies the suffix rules
  * to try and find a source and a set of rules for a missing
- * target.  If found, np is made into a target with the implicit
- * source name and rules.  For single colon rules this is done by
- * adding a new rule; double colon rules are temporarily modified
- * in-place.
+ * target.  NULL is returned on failure.  On success the name of
+ * the implicit prerequisite is returned and the details are
+ * placed in the imprule structure provided by the caller.
  */
 struct name *
-dyndep(struct name *np, struct rule *implicit)
+dyndep(struct name *np, struct rule *imprule)
 {
 	char *suff, *newsuff;
 	char *base, *name, *member;
@@ -78,14 +77,9 @@ dyndep(struct name *np, struct rule *implicit)
 					}
 				}
 				if (pp->n_time || hascmds) {
-					dp = newdep(pp, NULL);
-					if (implicit) {
-						dp->d_next = implicit->r_dep;
-						implicit->r_dep = dp;
-						implicit->r_cmd = sp->n_rule->r_cmd;
-					} else {
-						addrule(np, dp, sp->n_rule->r_cmd, FALSE);
-					}
+					// Prerequisite exists or we know how to make it
+					imprule->r_dep = newdep(pp, NULL);
+					imprule->r_cmd = sp->n_rule->r_cmd;
 					goto finish;
 				}
 				pp = NULL;

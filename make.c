@@ -155,6 +155,7 @@ make(struct name *np, int level)
 	struct depend *dp;
 	struct rule *rp;
 	struct name *impdep = NULL;	// implicit prerequisite
+	struct rule imprule;
 	char *newer = NULL;
 	time_t dtime = 1;
 	bool didsomething = 0;
@@ -172,9 +173,12 @@ make(struct name *np, int level)
 			if (rp->r_cmd)
 				break;
 
-		// If not look for an implicit rule
-		if (!rp)
-			impdep = dyndep(np, NULL);
+		// If not look for an inference rule
+		if (!rp) {
+			impdep = dyndep(np, &imprule);
+			if (impdep)
+				addrule(np, imprule.r_dep, imprule.r_cmd, FALSE);
+		}
 
 		// As a last resort check for a default rule
 		if (!(np->n_flag & N_TARGET) && np->n_time == 0L) {
@@ -190,12 +194,15 @@ make(struct name *np, int level)
 #if ENABLE_FEATURE_MAKE_EXTENSIONS
 		// Each double colon rule is handled separately.
 		if ((np->n_flag & N_DOUBLE)) {
-			// If the rule has no commands look for an implicit rule.
+			// If the rule has no commands look for an inference rule.
 			impdep = NULL;
 			if (!rp->r_cmd) {
-				impdep = dyndep(np, rp);
+				impdep = dyndep(np, &imprule);
 				if (!impdep)
 					error("don't know how to make %s", np->n_name);
+				imprule.r_dep->d_next = rp->r_dep;
+				rp->r_dep = imprule.r_dep;
+				rp->r_cmd = imprule.r_cmd;
 			}
 			// A rule with no prerequisities is executed unconditionally.
 			if (!rp->r_dep)
