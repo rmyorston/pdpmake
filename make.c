@@ -140,6 +140,11 @@ make(struct name *np, int level)
 	struct rule *rp;
 	struct name *impdep = NULL;	// implicit prerequisite
 	struct rule imprule;
+	struct cmd *sc_cmd = NULL;	// commands for single colon rule
+#if ENABLE_FEATURE_MAKE_EXTENSIONS
+	bool dc_infer = FALSE;
+	struct name *locdep = NULL;
+#endif
 	char *newer = NULL;
 	time_t dtime = 1;
 	bool didsomething = 0;
@@ -151,17 +156,26 @@ make(struct name *np, int level)
 	if (!np->n_time)
 		modtime(np);		// Get modtime of this file
 
-	if (!(np->n_flag & N_DOUBLE)) {
-		// Check if target has explicit build commands
-		for (rp = np->n_rule; rp; rp = rp->r_next)
-			if (rp->r_cmd)
-				break;
+	// Check if target requires the use of an inference rule.
+	// For single colon rules this is if *no* rule has commands;
+	// for double colon rules it's if *any* rule has *no* commands.
+	for (rp = np->n_rule; rp; rp = rp->r_next) {
+		if (rp->r_cmd)
+			sc_cmd = rp->r_cmd;
+#if ENABLE_FEATURE_MAKE_EXTENSIONS
+		else
+			dc_infer = TRUE;
+#endif
+	}
 
-		// If not look for an inference rule
-		if (!rp) {
+	if (!(np->n_flag & N_DOUBLE)) {
+		// Look for an inference rule
+		if (!sc_cmd) {
 			impdep = dyndep(np, &imprule);
-			if (impdep)
-				addrule(np, imprule.r_dep, imprule.r_cmd, FALSE);
+			if (impdep) {
+				sc_cmd = imprule.r_cmd;
+				addrule(np, imprule.r_dep, NULL, FALSE);
+			}
 		}
 
 		// As a last resort check for a default rule
@@ -169,21 +183,26 @@ make(struct name *np, int level)
 			struct name *dflt = findname(".DEFAULT");
 			if (!dflt)
 				error("don't know how to make %s", np->n_name);
-			addrule(np, NULL, dflt->n_rule->r_cmd, FALSE);
+			sc_cmd = dflt->n_rule->r_cmd;
 			impdep = np;
 		}
 	}
+#if ENABLE_FEATURE_MAKE_EXTENSIONS
+	else if (dc_infer) {
+		impdep = dyndep(np, &imprule);
+		if (!impdep)
+			error("don't know how to make %s", np->n_name);
+	}
+#endif
 
 	for (rp = np->n_rule; rp; rp = rp->r_next) {
 #if ENABLE_FEATURE_MAKE_EXTENSIONS
 		// Each double colon rule is handled separately.
 		if ((np->n_flag & N_DOUBLE)) {
-			// If the rule has no commands look for an inference rule.
-			impdep = NULL;
+			// If the rule has no commands use the inference rule.
+			locdep = NULL;
 			if (!rp->r_cmd) {
-				impdep = dyndep(np, &imprule);
-				if (!impdep)
-					error("don't know how to make %s", np->n_name);
+				locdep = impdep;
 				imprule.r_dep->d_next = rp->r_dep;
 				rp->r_dep = imprule.r_dep;
 				rp->r_cmd = imprule.r_cmd;
@@ -207,22 +226,24 @@ make(struct name *np, int level)
 		if ((np->n_flag & N_DOUBLE)) {
 			if (!quest && np->n_time <= dtime) {
 				if (estat == 0) {
-					estat = make1(np, rp->r_cmd, newer, impdep);
+					estat = make1(np, rp->r_cmd, newer, locdep);
 					dtime = 1;
 					didsomething = 1;
 				}
 				free(newer);
 				newer = NULL;
 			}
-			if (impdep) {
-				dp = rp->r_dep->d_next;
-				free(rp->r_dep);
-				rp->r_dep = dp;
+			if (locdep) {
+				rp->r_dep = rp->r_dep->d_next;
 				rp->r_cmd = NULL;
 			}
 		}
 #endif
 	}
+#if ENABLE_FEATURE_MAKE_EXTENSIONS
+	if ((np->n_flag & N_DOUBLE) && impdep)
+		free(imprule.r_dep);
+#endif
 
 	np->n_flag |= N_DONE;
 
@@ -233,13 +254,8 @@ make(struct name *np, int level)
 		}
 	} else if (np->n_time <= dtime && !(np->n_flag & N_DOUBLE)) {
 		if (estat == 0) {
-			for (rp = np->n_rule; rp; rp = rp->r_next) {
-				if (rp->r_cmd) {
-					estat = make1(np, rp->r_cmd, newer, impdep);
-					time(&np->n_time);
-					break;
-				}
-			}
+			estat = make1(np, sc_cmd, newer, impdep);
+			time(&np->n_time);
 			didsomething = 1;
 		} else {
 			warning("'%s' not built due to errors", np->n_name);
