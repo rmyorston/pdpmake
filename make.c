@@ -19,13 +19,12 @@ remove_target(void)
  * Do commands to make a target
  */
 static int
-docmds1(struct name *np, struct rule *rp)
+docmds(struct name *np, struct cmd *cp)
 {
 	int estat = 0;	// 0 exit status is success
 	char *q, *command;
-	struct cmd *cp;
 
-	for (cp = rp->r_cmd; cp; cp = cp->c_next) {
+	for (; cp; cp = cp->c_next) {
 		uint8_t ssilent, signore, sdomake;
 
 		q = command = expand_macros(cp->c_cmd);
@@ -81,17 +80,6 @@ docmds1(struct name *np, struct rule *rp)
 	return estat;
 }
 
-static int
-docmds(struct name *np)
-{
-	struct rule *rp;
-	int estat = 0;	// 0 exit status is success
-
-	for (rp = np->n_rule; rp; rp = rp->r_next)
-		estat |= docmds1(np, rp);
-	return estat;
-}
-
 /*
  * Update the modification time of a file to now.
  */
@@ -118,7 +106,7 @@ touch(struct name *np)
 }
 
 static int
-make1(struct name *np, struct rule *rp, char *newer, struct name *implicit)
+make1(struct name *np, struct cmd *cp, char *newer, struct name *implicit)
 {
 	int estat = 0;	// 0 exit status is success
 	char *name, *member = NULL, *base;
@@ -135,11 +123,7 @@ make1(struct name *np, struct rule *rp, char *newer, struct name *implicit)
 	}
 	free(name);
 
-	if (rp)		// rp set if doing a :: rule
-		estat = docmds1(np, rp);
-	else
-		estat = docmds(np);
-
+	estat = docmds(np, cp);
 	if (dotouch)
 		touch(np);
 
@@ -223,7 +207,7 @@ make(struct name *np, int level)
 		if ((np->n_flag & N_DOUBLE)) {
 			if (!quest && np->n_time <= dtime) {
 				if (estat == 0) {
-					estat = make1(np, rp, newer, impdep);
+					estat = make1(np, rp->r_cmd, newer, impdep);
 					dtime = 1;
 					didsomething = 1;
 				}
@@ -249,8 +233,13 @@ make(struct name *np, int level)
 		}
 	} else if (np->n_time <= dtime && !(np->n_flag & N_DOUBLE)) {
 		if (estat == 0) {
-			estat = make1(np, NULL, newer, impdep);
-			time(&np->n_time);
+			for (rp = np->n_rule; rp; rp = rp->r_next) {
+				if (rp->r_cmd) {
+					estat = make1(np, rp->r_cmd, newer, impdep);
+					time(&np->n_time);
+					break;
+				}
+			}
 			didsomething = 1;
 		} else {
 			warning("'%s' not built due to errors", np->n_name);
