@@ -244,6 +244,7 @@ make(struct name *np, int level)
 		if (estat == 0) {
 			estat = make1(np, NULL, newer, impdep);
 			time(&np->n_time);
+			didsomething = 1;
 		} else {
 			warning("'%s' not built due to errors", np->n_name);
 		}
