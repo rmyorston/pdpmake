@@ -144,6 +144,9 @@ getcmd(struct name *np)
 {
 	struct rule *rp;
 
+	if (np == NULL)
+		return NULL;
+
 	for (rp = np->n_rule; rp; rp = rp->r_next)
 		if (rp->r_cmd)
 			return rp->r_cmd;

@@ -166,10 +166,9 @@ make(struct name *np, int level)
 
 		// As a last resort check for a default rule
 		if (!(np->n_flag & N_TARGET) && np->n_time == 0L) {
-			struct name *dflt = findname(".DEFAULT");
-			if (!dflt)
+			sc_cmd = getcmd(findname(".DEFAULT"));
+			if (!sc_cmd)
 				error("don't know how to make %s", np->n_name);
-			sc_cmd = dflt->n_rule->r_cmd;
 			impdep = np;
 		}
 	}
