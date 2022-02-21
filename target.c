@@ -224,10 +224,12 @@ addrule(struct name *np, struct depend *dp, struct cmd *cp, int flag)
 
 	if (cp && !(np->n_flag & N_DOUBLE) && getcmd(np)) {
 		// Handle the inference rule redefinition case
-		if ((np->n_flag & N_SPECIAL) && !dp)
+		if ((np->n_flag & N_SPECIAL) && !dp) {
 			freerules(np->n_rule);
-		else
+			np->n_rule = NULL;
+		} else {
 			error("commands defined twice for target %s", np->n_name);
+		}
 	}
 
 	rpp = &np->n_rule;
