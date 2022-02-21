@@ -196,7 +196,7 @@ inc_ref(void *vp)
 /*
  * Add a new rule to a target.  This checks to see if commands already
  * exist for the target.  If flag is TRUE the target can have multiple
- * rules with commands (double colon rules).
+ * rules with commands (double-colon rules).
  *
  * i)  If the name is a special target and there are no prerequisites
  *     or commands to be added remove all prerequisites and commands.
@@ -211,7 +211,7 @@ addrule(struct name *np, struct depend *dp, struct cmd *cp, int flag)
 	struct rule **rpp;
 
 #if ENABLE_FEATURE_MAKE_EXTENSIONS
-	// Can't mix colon and double colon rules
+	// Can't mix single-colon and double-colon rules
 	if (!posix && (np->n_flag & N_TARGET)) {
 		if (!(np->n_flag & N_DOUBLE) != !flag)		// like xor
 			error("inconsistent rules for target %s", np->n_name);

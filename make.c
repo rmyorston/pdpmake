@@ -140,7 +140,7 @@ make(struct name *np, int level)
 	struct rule *rp;
 	struct name *impdep = NULL;	// implicit prerequisite
 	struct rule imprule;
-	struct cmd *sc_cmd = NULL;	// commands for single colon rule
+	struct cmd *sc_cmd = NULL;	// commands for single-colon rule
 	char *newer = NULL;
 	time_t dtime = 1;
 	bool didsomething = 0;
@@ -153,7 +153,7 @@ make(struct name *np, int level)
 		modtime(np);		// Get modtime of this file
 
 	if (!(np->n_flag & N_DOUBLE)) {
-		// Find the commands needed for a single colon rule, using
+		// Find the commands needed for a single-colon rule, using
 		// an inference rule or .DEFAULT rule if necessary
 		sc_cmd = getcmd(np);
 		if (!sc_cmd) {
@@ -174,7 +174,7 @@ make(struct name *np, int level)
 	}
 #if ENABLE_FEATURE_MAKE_EXTENSIONS
 	else {
-		// If any double colon rule has no commands we need
+		// If any double-colon rule has no commands we need
 		// an inference rule
 		for (rp = np->n_rule; rp; rp = rp->r_next) {
 			if (!rp->r_cmd) {
@@ -191,7 +191,7 @@ make(struct name *np, int level)
 #if ENABLE_FEATURE_MAKE_EXTENSIONS
 		struct name *locdep = NULL;
 
-		// Each double colon rule is handled separately.
+		// Each double-colon rule is handled separately.
 		if ((np->n_flag & N_DOUBLE)) {
 			// If the rule has no commands use the inference rule.
 			if (!rp->r_cmd) {

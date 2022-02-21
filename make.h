@@ -94,9 +94,9 @@ struct name {
 #define N_TARGET	0x04	// Name is a target
 #define N_PRECIOUS	0x08	// Target is precious
 #if ENABLE_FEATURE_MAKE_EXTENSIONS
-#define N_DOUBLE	0x10	// Double colon target
+#define N_DOUBLE	0x10	// Double-colon target
 #else
-#define N_DOUBLE	0x00	// No support for double colon target
+#define N_DOUBLE	0x00	// No support for double-colon target
 #endif
 #define N_SILENT	0x20	// Build target silently
 #define N_IGNORE	0x40	// Ignore build errors

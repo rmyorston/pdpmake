@@ -9,7 +9,7 @@ In its default configuration only POSIX features are supported.  Some
 extensions can be enabled by setting `ENABLE_FEATURE_MAKE_EXTENSIONS`
 to 1.  These are largely compatible with GNU make:
 
- - double colon rules
+ - double-colon rules
  - `-include` to ignore missing include files
  - `ifdef`/`ifndef`/`else`/`endif` conditionals
  - `lib.a(mem1.o mem2.o...)` syntax for archive members
