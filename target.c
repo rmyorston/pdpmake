@@ -93,92 +93,6 @@ freecmds(struct cmd *cp)
 	}
 }
 
-void
-freerules(struct rule *rp)
-{
-	struct rule *nextrp;
-
-	for (; rp; rp = nextrp) {
-		nextrp = rp->r_next;
-		freedeps(rp->r_dep);
-		freecmds(rp->r_cmd);
-		free(rp);
-	}
-}
-
-static void *
-inc_ref(void *vp)
-{
-	if (vp) {
-		struct depend *dp = vp;
-		if (dp->d_refcnt == INT_MAX)
-			error("out of memory");
-		dp->d_refcnt++;
-	}
-	return vp;
-}
-
-/*
- * Add a new rule to a target.  This checks to see if commands already
- * exist for the target.  If flag is TRUE the target can have multiple
- * rules with commands (double colon rules).
- *
- * i)  If the name is a special target and there are no prerequisites
- *     or commands to be added remove all prerequisites and commands.
- *     This is necessary when clearing a built-in inference rule.
- * ii) If name is a special target and has commands, replace them.
- *     This is for redefining commands for an inference rule.
- */
-void
-addrule(struct name *np, struct depend *dp, struct cmd *cp, int flag)
-{
-	bool hascmds = FALSE;	// Target has commands
-	struct rule *rp;
-	struct rule **rpp;
-
-#if ENABLE_FEATURE_MAKE_EXTENSIONS
-	// Can't mix colon and double colon rules
-	if (!posix && (np->n_flag & N_TARGET)) {
-		if (!(np->n_flag & N_DOUBLE) != !flag)		// like xor
-			error("inconsistent rules for target %s", np->n_name);
-	}
-#endif
-
-	// Clear out prerequisites and commands
-	if ((np->n_flag & N_SPECIAL) && !dp && !cp) {
-		freerules(np->n_rule);
-		np->n_rule = NULL;
-		return;
-	}
-
-	// This loop must run to completion since rpp is used later.
-	rpp = &np->n_rule;
-	for (rp = np->n_rule; rp; rp = rp->r_next) {
-		if (rp->r_cmd)
-			hascmds = TRUE;
-		rpp = &rp->r_next;
-	}
-
-	if (hascmds && cp && !(np->n_flag & N_DOUBLE)) {
-		// Handle the inference rule redefinition case
-		if ((np->n_flag & N_SPECIAL) && !dp) {
-			freerules(np->n_rule);
-			rpp = &np->n_rule;
-		} else {
-			error("commands defined twice for target %s", np->n_name);
-		}
-	}
-
-	*rpp = rp = xmalloc(sizeof(struct rule));
-	rp->r_next = NULL;
-	rp->r_dep = inc_ref(dp);
-	rp->r_cmd = inc_ref(cp);
-
-	np->n_flag |= N_TARGET;
-	if (flag)
-		np->n_flag |= N_DOUBLE;
-}
-
 struct name *namehead;
 struct name *nametail;
 struct name *firstname;
@@ -222,6 +136,20 @@ newname(const char *name)
 	return np;
 }
 
+/*
+ * Return the commands on the first rule that has them or NULL.
+ */
+struct cmd *
+getcmd(struct name *np)
+{
+	struct rule *rp;
+
+	for (rp = np->n_rule; rp; rp = rp->r_next)
+		if (rp->r_cmd)
+			return rp->r_cmd;
+	return NULL;
+}
+
 #if ENABLE_FEATURE_CLEAN_UP
 void
 freenames(void)
@@ -236,3 +164,82 @@ freenames(void)
 	}
 }
 #endif
+
+void
+freerules(struct rule *rp)
+{
+	struct rule *nextrp;
+
+	for (; rp; rp = nextrp) {
+		nextrp = rp->r_next;
+		freedeps(rp->r_dep);
+		freecmds(rp->r_cmd);
+		free(rp);
+	}
+}
+
+static void *
+inc_ref(void *vp)
+{
+	if (vp) {
+		struct depend *dp = vp;
+		if (dp->d_refcnt == INT_MAX)
+			error("out of memory");
+		dp->d_refcnt++;
+	}
+	return vp;
+}
+
+/*
+ * Add a new rule to a target.  This checks to see if commands already
+ * exist for the target.  If flag is TRUE the target can have multiple
+ * rules with commands (double colon rules).
+ *
+ * i)  If the name is a special target and there are no prerequisites
+ *     or commands to be added remove all prerequisites and commands.
+ *     This is necessary when clearing a built-in inference rule.
+ * ii) If name is a special target and has commands, replace them.
+ *     This is for redefining commands for an inference rule.
+ */
+void
+addrule(struct name *np, struct depend *dp, struct cmd *cp, int flag)
+{
+	struct rule *rp;
+	struct rule **rpp;
+
+#if ENABLE_FEATURE_MAKE_EXTENSIONS
+	// Can't mix colon and double colon rules
+	if (!posix && (np->n_flag & N_TARGET)) {
+		if (!(np->n_flag & N_DOUBLE) != !flag)		// like xor
+			error("inconsistent rules for target %s", np->n_name);
+	}
+#endif
+
+	// Clear out prerequisites and commands
+	if ((np->n_flag & N_SPECIAL) && !dp && !cp) {
+		freerules(np->n_rule);
+		np->n_rule = NULL;
+		return;
+	}
+
+	if (cp && !(np->n_flag & N_DOUBLE) && getcmd(np)) {
+		// Handle the inference rule redefinition case
+		if ((np->n_flag & N_SPECIAL) && !dp)
+			freerules(np->n_rule);
+		else
+			error("commands defined twice for target %s", np->n_name);
+	}
+
+	rpp = &np->n_rule;
+	while (*rpp)
+		rpp = &(*rpp)->r_next;
+
+	*rpp = rp = xmalloc(sizeof(struct rule));
+	rp->r_next = NULL;
+	rp->r_dep = inc_ref(dp);
+	rp->r_cmd = inc_ref(cp);
+
+	np->n_flag |= N_TARGET;
+	if (flag)
+		np->n_flag |= N_DOUBLE;
+}

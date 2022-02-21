@@ -45,9 +45,8 @@ dyndep(struct name *np, struct rule *imprule)
 	struct name *xp;		// Suffixes
 	struct name *sp;		// Suffix rule
 	struct name *pp = NULL;	// Implicit prerequisite
-	struct rule *rp, *rp2;
+	struct rule *rp;
 	struct depend *dp;
-	bool hascmds = FALSE;
 
 	member = NULL;
 	name = splitlib(np->n_name, &member);
@@ -67,16 +66,7 @@ dyndep(struct name *np, struct rule *imprule)
 				pp = namecat(base, newsuff, TRUE);
 				if (!pp->n_time)
 					modtime(pp);
-				if (!pp->n_time) {
-					// File doesn't currently exist, can we make it?
-					for (rp2 = pp->n_rule; rp2; rp2 = rp2->r_next) {
-						if (rp2->r_cmd) {
-							hascmds = TRUE;
-							break;
-						}
-					}
-				}
-				if (pp->n_time || hascmds) {
+				if (pp->n_time || getcmd(np)) {
 					// Prerequisite exists or we know how to make it
 					imprule->r_dep = newdep(pp, NULL);
 					imprule->r_cmd = sp->n_rule->r_cmd;

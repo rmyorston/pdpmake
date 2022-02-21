@@ -165,6 +165,7 @@ struct name *dyndep(struct name *np, struct rule *imprule);
 char *getrules(char *s, int size);
 struct name *findname(const char *name);
 struct name *newname(const char *name);
+struct cmd *getcmd(struct name *np);
 void freenames(void);
 struct depend *newdep(struct name *np, struct depend *dp);
 void freedeps(struct depend *dp);

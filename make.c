@@ -141,10 +141,6 @@ make(struct name *np, int level)
 	struct name *impdep = NULL;	// implicit prerequisite
 	struct rule imprule;
 	struct cmd *sc_cmd = NULL;	// commands for single colon rule
-#if ENABLE_FEATURE_MAKE_EXTENSIONS
-	bool dc_infer = FALSE;
-	struct name *locdep = NULL;
-#endif
 	char *newer = NULL;
 	time_t dtime = 1;
 	bool didsomething = 0;
@@ -156,20 +152,10 @@ make(struct name *np, int level)
 	if (!np->n_time)
 		modtime(np);		// Get modtime of this file
 
-	// Check if target requires the use of an inference rule.
-	// For single colon rules this is if *no* rule has commands;
-	// for double colon rules it's if *any* rule has *no* commands.
-	for (rp = np->n_rule; rp; rp = rp->r_next) {
-		if (rp->r_cmd)
-			sc_cmd = rp->r_cmd;
-#if ENABLE_FEATURE_MAKE_EXTENSIONS
-		else
-			dc_infer = TRUE;
-#endif
-	}
-
 	if (!(np->n_flag & N_DOUBLE)) {
-		// Look for an inference rule
+		// Find the commands needed for a single colon rule, using
+		// an inference rule or .DEFAULT rule if necessary
+		sc_cmd = getcmd(np);
 		if (!sc_cmd) {
 			impdep = dyndep(np, &imprule);
 			if (impdep) {
@@ -188,19 +174,27 @@ make(struct name *np, int level)
 		}
 	}
 #if ENABLE_FEATURE_MAKE_EXTENSIONS
-	else if (dc_infer) {
-		impdep = dyndep(np, &imprule);
-		if (!impdep)
-			error("don't know how to make %s", np->n_name);
+	else {
+		// If any double colon rule has no commands we need
+		// an inference rule
+		for (rp = np->n_rule; rp; rp = rp->r_next) {
+			if (!rp->r_cmd) {
+				impdep = dyndep(np, &imprule);
+				if (!impdep)
+					error("don't know how to make %s", np->n_name);
+				break;
+			}
+		}
 	}
 #endif
 
 	for (rp = np->n_rule; rp; rp = rp->r_next) {
 #if ENABLE_FEATURE_MAKE_EXTENSIONS
+		struct name *locdep = NULL;
+
 		// Each double colon rule is handled separately.
 		if ((np->n_flag & N_DOUBLE)) {
 			// If the rule has no commands use the inference rule.
-			locdep = NULL;
 			if (!rp->r_cmd) {
 				locdep = impdep;
 				imprule.r_dep->d_next = rp->r_dep;
@@ -214,7 +208,7 @@ make(struct name *np, int level)
 #endif
 		for (dp = rp->r_dep; dp; dp = dp->d_next) {
 			// Make prerequisite
-			estat |= make(dp->d_name, level+1);
+			estat |= make(dp->d_name, level + 1);
 
 			// Make a string listing prerequisites newer than target
 			// (but not if we were invoked with -q).
