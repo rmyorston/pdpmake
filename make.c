@@ -247,9 +247,12 @@ make(struct name *np, int level)
 		}
 	} else if (np->n_time <= dtime && !(np->n_flag & N_DOUBLE)) {
 		if (estat == 0) {
-			estat = make1(np, sc_cmd, newer, impdep);
-			time(&np->n_time);
-			didsomething = 1;
+			if (!sc_cmd) {
+				warning("nothing to be done for %s", np->n_name);
+			} else {
+				estat = make1(np, sc_cmd, newer, impdep);
+				time(&np->n_time);
+			}
 		} else {
 			warning("'%s' not built due to errors", np->n_name);
 		}
