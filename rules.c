@@ -66,7 +66,7 @@ dyndep(struct name *np, struct rule *imprule)
 				pp = namecat(base, newsuff, TRUE);
 				if (!pp->n_time)
 					modtime(pp);
-				if (pp->n_time || getcmd(np)) {
+				if (pp->n_time || getcmd(pp)) {
 					// Prerequisite exists or we know how to make it
 					imprule->r_dep = newdep(pp, NULL);
 					imprule->r_cmd = sp->n_rule->r_cmd;
