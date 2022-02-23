@@ -1,0 +1,108 @@
+#!/bin/sh
+
+. ./testing.sh
+
+# testing "test name" "command" "expected result" "file input" "stdin"
+
+# =================================================================
+# The following tests work in POSIX mode or with extensions enabled
+# =================================================================
+
+testing "Basic makefile" \
+	"make -f -" "target\n" "" "\
+target:
+	@echo target
+"
+
+# .DEFAULT rules with no commands or some prerequisites are ignored.
+# .DEFAULT rules with commands can be redefined.
+testing ".DEFAULT rule" \
+	"make -f - default" "default2\n" "" "\
+.DEFAULT: ignored
+.DEFAULT:
+	@echo default1
+.DEFAULT:
+	@echo default2
+target:
+"
+
+# Early versions of the code didn't properly implement skipping
+# certain macro expansions in POSIX mode.  This is a design decision:
+# other implementations may justifiably do this differently and fail
+# this test.
+testing "Macro skipping in POSIX mode" \
+	"make -f -" "0 bc\n1\n2\n3\n4\n5\n" "" '\
+.POSIX:
+a = b
+b = c
+c = d
+$(a:.q=.v)$(b:.z=.v) = bc
+bcd = bcd
+target:
+	@echo 0 $(bc)
+	@echo 1 $($($(a)))
+	@echo 2 $($(a) $(b) $(c))
+	@echo 3 $($a $b $c)
+	@echo 4 $($(a)$(b)$(c))
+	@echo 5 $($a$b$c)
+'
+
+# Macros should be expanded before suffix substitution.  The suffixes
+# can be obtained by macro expansion.
+testing "Macro expansion and suffix substitution" \
+	"make -f -" "src1.o src2.o\n" "" '\
+DOTC = .c
+DOTO = .o
+SRC1 = src1.c
+SRCS = $(SRC1) src2.c
+OBJS = $(SRCS:$(DOTC)=$(DOTO))
+target:
+	@echo $(OBJS)
+'
+
+# It should be possible for an inference rule to determine that a
+# prerequisite can be created using an explicit rule.
+rm -f x.p x.q
+testing "Inference rule with explicit rule for prerequisite" \
+	"make -f -" "touch x.p\ncat x.p >x.q\n" "" '\
+.SUFFIXES: .p .q
+x.q:
+x.p:
+	touch $@
+.p.q:
+	cat $< >$@
+'
+rm -f x.p x.q
+
+# =================================================================
+# The following tests require extensions to be enabled.  They're
+# expected to fail in POSIX mode.
+# =================================================================
+
+optional FEATURE_MAKE_EXTENSIONS
+testing "Double-colon rule" \
+	"make -f -" "target1\ntarget2\n" "" "\
+target::
+	@echo target1
+target::
+	@echo target2
+"
+
+# In non-POSIX mode nested macro expansion is allowed.  This should
+# be compatible with other implementations.
+testing "Nested macro expansion in non-POSIX mode" \
+	"make -f -" "0 bc\n1 d\n2\n3\n4 bcd\n5 bcd\n" "" '\
+a = b
+b = c
+c = d
+$(a:.q=.v)$(b:.z=.v) = bc
+bcd = bcd
+target:
+	@echo 0 $(bc)
+	@echo 1 $($($(a)))
+	@echo 2 $($(a) $(b) $(c))
+	@echo 3 $($a $b $c)
+	@echo 4 $($(a)$(b)$(c))
+	@echo 5 $($a$b$c)
+'
+SKIP=

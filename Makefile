@@ -7,5 +7,8 @@ make: $(OBJS)
 
 $(OBJS): make.h
 
+test: make
+	@cd testsuite && ./runtest
+
 clean:
 	rm -f $(OBJS) make

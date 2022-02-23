@@ -1,0 +1,44 @@
+#!/bin/sh
+# Usage:
+# runtest [-v]
+
+. ./testing.sh
+
+total_failed=0
+
+lcwd=$(pwd)
+[ x"$tsdir" != x"" ] || tsdir="$lcwd"
+[ x"$bindir" != x"" ] || bindir="${lcwd%/*}" # one directory up from $lcwd
+
+if [ x"$VERBOSE" = x ]; then
+	export VERBOSE=
+fi
+
+if [ x"$1" = x"-v" ]; then
+	export VERBOSE=1
+	shift
+fi
+
+# Test whether the binary has extensions enabled.
+if ../make -f - 2>/dev/null <<EOF
+VAR := value
+target:
+	@:
+EOF
+then
+	export OPTIONFLAGS=:FEATURE_MAKE_EXTENSIONS:
+else
+	export OPTIONFLAGS=::
+fi
+
+status=0
+PATH="$tsdir:$bindir:$PATH" \
+	"$tsdir/make.tests"
+rc=$?
+total_failed=$((total_failed + rc))
+test $rc -ne 0 && status=1
+
+if [ $status -ne 0 ] && [ x"$VERBOSE" = x ]; then
+	echo "$total_failed failure(s) detected; running with -v (verbose) will give more info"
+fi
+exit $status
