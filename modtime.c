@@ -2,6 +2,7 @@
  * Get modification time of file or archive member
  */
 #include "make.h"
+#include <ar.h>
 
 /*
  * Read a number from an archive header.
@@ -30,14 +31,16 @@ argetnum(const char *str, int len)
 static time_t
 arsearch(FILE *fd, const char *member)
 {
-	char header[60], *s, *t, *names = NULL;
+	struct ar_hdr hdr;
+	char *s, *t, *names = NULL;
 	size_t len, offset, max_offset = 0;
 	time_t mtime = 0;
 
 	do {
  top:
-		len = fread(header, 1, sizeof(header), fd);
-		if (len < sizeof(header) || header[58] != '`' || header[59] != '\n') {
+		len = fread(&hdr, 1, sizeof(hdr), fd);
+		if (len < sizeof(hdr) ||
+				memcmp(hdr.ar_fmag, ARFMAG, sizeof(hdr.ar_fmag)) != 0) {
 			if (feof(fd))
 				break;
 			error("invalid archive");
@@ -45,16 +48,16 @@ arsearch(FILE *fd, const char *member)
 
 		// Get length of this member.  Length in the file is padded
 		// to an even number of bytes.
-		len = argetnum(header + 48, 10);
+		len = argetnum(hdr.ar_size, sizeof(hdr.ar_size));
 		if (len % 2 == 1)
 			len++;
 
-		t = header;
-		if (header[0] == '/') {
-			if (header[1] == ' ') {
+		t = hdr.ar_name;
+		if (hdr.ar_name[0] == '/') {
+			if (hdr.ar_name[1] == ' ') {
 				// Skip symbol table
 				continue;
-			} else if (header[1] == '/' && names == NULL) {
+			} else if (hdr.ar_name[1] == '/' && names == NULL) {
 				// Save list of extended filenames for later use
 				names = xmalloc(len);
 				if (fread(names, 1, len, fd) != len)
@@ -66,9 +69,9 @@ arsearch(FILE *fd, const char *member)
 				}
 				max_offset = len;
 				goto top;
-			} else if (isdigit(header[1]) && names) {
+			} else if (isdigit(hdr.ar_name[1]) && names) {
 				// An extended filename, get its offset in the names list
-				offset = argetnum(header + 1, 15);
+				offset = argetnum(hdr.ar_name + 1, sizeof(hdr.ar_name) - 1);
 				if (offset > max_offset)
 					error("invalid archive");
 				t = names + offset;
@@ -83,7 +86,7 @@ arsearch(FILE *fd, const char *member)
 		*s = '\0';
 
 		if (strcmp(t, member) == 0) {
-			mtime = argetnum(header + 16, 12);
+			mtime = argetnum(hdr.ar_date, sizeof(hdr.ar_date));
 			break;
 		}
 	} while (fseek(fd, len, SEEK_CUR) == 0);
@@ -95,7 +98,7 @@ static time_t
 artime(const char *archive, const char *member)
 {
 	FILE *fd;
-	char magic[8];
+	char magic[SARMAG];
 	size_t len;
 	time_t mtime;
 
@@ -104,7 +107,7 @@ artime(const char *archive, const char *member)
 		return 0;
 
 	len = fread(magic, 1, sizeof(magic), fd);
-	if (len < sizeof(magic) || memcmp(magic, "!<arch>\n", 8) != 0)
+	if (len < sizeof(magic) || memcmp(magic, ARMAG, SARMAG) != 0)
 		error("%s: not an archive", archive);
 
 	mtime = arsearch(fd, member);
