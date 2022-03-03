@@ -89,7 +89,7 @@ struct name {
 	uint8_t n_flag;			// Info about the name
 };
 
-#define N_MARK		0x01	// For cycle check
+#define N_DOING		0x01	// Name in process of being built
 #define N_DONE		0x02	// Name looked at
 #define N_TARGET	0x04	// Name is a target
 #define N_PRECIOUS	0x08	// Target is precious
@@ -150,7 +150,6 @@ extern bool first_line;
 #endif
 
 void print_details(void);
-void cycle_check(void);
 char *expand_macros(const char *str);
 void input(FILE *fd);
 struct macro *getmp(const char *name);

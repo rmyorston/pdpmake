@@ -66,37 +66,3 @@ print_details(void)
 		}
 	}
 }
-
-/* Recursive routine that does the actual checking. */
-static void
-check(struct name *np)
-{
-	struct rule *rp;
-	struct depend *dp;
-
-	if (np->n_flag & N_MARK)
-		error("circular dependency from %s", np->n_name);
-
-	np->n_flag |= N_MARK;
-
-	for (rp = np->n_rule; rp; rp = rp->r_next)
-		for (dp = rp->r_dep; dp; dp = dp->d_next)
-			check(dp->d_name);
-
-	np->n_flag &= ~N_MARK;
-}
-
-/*
- * Look for circular dependencies.  For example,
- *    a: b
- *    b: a
- * is a circular dependency.
- */
-void
-cycle_check(void)
-{
-	struct name *np;
-
-	for (np = namehead; np; np = np->n_next)
-		check(np);
-}

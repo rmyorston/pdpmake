@@ -148,6 +148,9 @@ make(struct name *np, int level)
 
 	if (np->n_flag & N_DONE)
 		return 0;
+	if (np->n_flag & N_DOING)
+		error("circular dependency for %s", np->n_name);
+	np->n_flag |= N_DOING;
 
 	if (!np->n_time)
 		modtime(np);		// Get modtime of this file
@@ -239,6 +242,7 @@ make(struct name *np, int level)
 #endif
 
 	np->n_flag |= N_DONE;
+	np->n_flag &= ~N_DOING;
 
 	if (quest) {
 		if (np->n_time <= dtime) {
