@@ -47,6 +47,7 @@ dyndep(struct name *np, struct rule *imprule)
 	struct name *pp = NULL;	// Implicit prerequisite
 	struct rule *rp;
 	struct depend *dp;
+	IF_NOT_FEATURE_MAKE_EXTENSIONS(const) bool chain = FALSE;
 
 	member = NULL;
 	name = splitlib(np->n_name, &member);
@@ -56,6 +57,9 @@ dyndep(struct name *np, struct rule *imprule)
 	*suffix(base) = '\0';
 
 	xp = newname(".SUFFIXES");
+#if ENABLE_FEATURE_MAKE_EXTENSIONS
+ retry:
+#endif
 	for (rp = xp->n_rule; rp; rp = rp->r_next) {
 		for (dp = rp->r_dep; dp; dp = dp->d_next) {
 			// Generate new suffix rule to try
@@ -66,16 +70,27 @@ dyndep(struct name *np, struct rule *imprule)
 				pp = namecat(base, newsuff, TRUE);
 				if (!pp->n_time)
 					modtime(pp);
-				if (pp->n_time || getcmd(pp)) {
+				if ((!chain && (pp->n_time || getcmd(pp))) ||
+						(chain && dyndep(pp, NULL))) {
 					// Prerequisite exists or we know how to make it
-					imprule->r_dep = newdep(pp, NULL);
-					imprule->r_cmd = sp->n_rule->r_cmd;
+					if (imprule) {
+						imprule->r_dep = newdep(pp, NULL);
+						imprule->r_cmd = sp->n_rule->r_cmd;
+					}
 					goto finish;
 				}
 				pp = NULL;
 			}
 		}
 	}
+#if ENABLE_FEATURE_MAKE_EXTENSIONS
+	// If we didn't find an existing file or an explicit rule try
+	// again, this time looking for a chained inference rule.
+	if (!posix && !chain) {
+		chain = TRUE;
+		goto retry;
+	}
+#endif
  finish:
 	free(suff);
 	free(name);

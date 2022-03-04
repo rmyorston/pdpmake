@@ -32,8 +32,10 @@ extern char **environ;
 
 #if ENABLE_FEATURE_MAKE_EXTENSIONS
 # define IF_FEATURE_MAKE_EXTENSIONS(...) __VA_ARGS__
+# define IF_NOT_FEATURE_MAKE_EXTENSIONS(...)
 #else
 # define IF_FEATURE_MAKE_EXTENSIONS(...)
+# define IF_NOT_FEATURE_MAKE_EXTENSIONS(...) __VA_ARGS__
 #endif
 
 // If ENABLE_FEATURE_CLEAN_UP is non-zero all allocated structures are

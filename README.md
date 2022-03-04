@@ -15,6 +15,7 @@ to 1.  These are largely compatible with GNU make:
  - `lib.a(mem1.o mem2.o...)` syntax for archive members
  - `:=`/`+=`/`?=` macro assignments
  - macro expansions can be nested
+ - chained inference rules
 
 When extensions are enabled adding the `.POSIX` target to your makefile
 will disable them.  Other versions of make tend to allow extensions even

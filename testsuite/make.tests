@@ -105,4 +105,20 @@ target:
 	@echo 4 $($(a)$(b)$(c))
 	@echo 5 $($a$b$c)
 '
+
+# Use chained inference rules to determine prerequisites.
+rm -f target.?
+touch target.p
+testing "Chained inference rules" \
+	"make -f - target.s" \
+	"cp target.p target.q\ncp target.q target.r\ncp target.r target.s\n" "" '\
+.SUFFIXES: .p .q .r .s
+.p.q:
+	cp $< $*.q
+.q.r:
+	cp $< $*.r
+.r.s:
+	cp $< $*.s
+'
+rm -f target.?
 SKIP=
