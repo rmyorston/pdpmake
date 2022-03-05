@@ -210,25 +210,27 @@ update_makeflags(void)
 	if (optbuf[1])
 		makeflags = xstrdup(optbuf);
 
-	for (mp = macrohead; mp; mp = mp->m_next) {
-		if ((mp->m_level == 1 || mp->m_level == 2) &&
-				strcmp(mp->m_name, "MAKEFLAGS") != 0) {
-			macro = xmalloc(strlen(mp->m_name) + 2 * strlen(mp->m_val) + 1);
-			s = stpcpy(macro, mp->m_name);
-			*s++ = '=';
-			for (t = mp->m_val; *t; t++) {
-				if (*t == '\\' || isblank(*t))
-					*s++ = '\\';
-				*s++ = *t;
+	for (i = 0; i < HTABSIZE; ++i) {
+		for (mp = macrohead[i]; mp; mp = mp->m_next) {
+			if ((mp->m_level == 1 || mp->m_level == 2) &&
+					strcmp(mp->m_name, "MAKEFLAGS") != 0) {
+				macro = xmalloc(strlen(mp->m_name) + 2 * strlen(mp->m_val) + 1);
+				s = stpcpy(macro, mp->m_name);
+				*s++ = '=';
+				for (t = mp->m_val; *t; t++) {
+					if (*t == '\\' || isblank(*t))
+						*s++ = '\\';
+					*s++ = *t;
+				}
+				*s = '\0';
+
+				makeflags = xappendword(makeflags, macro);
+				free(macro);
+
+				// Add command line macro definitions to the environment
+				if (mp->m_level == 1 && strcmp(mp->m_name, "SHELL") != 0)
+					setenv(mp->m_name, mp->m_val, 1);
 			}
-			*s = '\0';
-
-			makeflags = xappendword(makeflags, macro);
-			free(macro);
-
-			// Add command line macro definitions to the environment
-			if (mp->m_level == 1 && strcmp(mp->m_name, "SHELL") != 0)
-				setenv(mp->m_name, mp->m_val, 1);
 		}
 	}
 

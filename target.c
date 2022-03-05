@@ -93,8 +93,7 @@ freecmds(struct cmd *cp)
 	}
 }
 
-struct name *namehead;
-struct name *nametail;
+struct name *namehead[HTABSIZE];
 struct name *firstname;
 
 struct name *
@@ -102,7 +101,7 @@ findname(const char *name)
 {
 	struct name *np;
 
-	for (np = namehead; np; np = np->n_next) {
+	for (np = namehead[getbucket(name)]; np; np = np->n_next) {
 		if (strcmp(name, np->n_name) == 0)
 			return np;
 	}
@@ -115,24 +114,18 @@ findname(const char *name)
 struct name *
 newname(const char *name)
 {
-	struct name *np;
+	struct name *np = findname(name);
 
-	np = findname(name);
-	if (np != NULL)
-		return np;
-
-	np = xmalloc(sizeof(struct name));
-	if (!namehead)
-		namehead = np;
-	else
-		nametail->n_next = np;
-	nametail = np;
-	np->n_next = NULL;
-	np->n_name = xstrdup(name);
-	np->n_rule = NULL;
-	np->n_time = 0;
-	np->n_flag = 0;
-
+	if (np == NULL) {
+		unsigned int bucket = getbucket(name);
+		np = xmalloc(sizeof(struct name));
+		np->n_next = namehead[bucket];
+		namehead[bucket] = np;
+		np->n_name = xstrdup(name);
+		np->n_rule = NULL;
+		np->n_time = 0;
+		np->n_flag = 0;
+	}
 	return np;
 }
 
@@ -157,13 +150,16 @@ getcmd(struct name *np)
 void
 freenames(void)
 {
+	int i;
 	struct name *np, *nextnp;
 
-	for (np = namehead; np; np = nextnp) {
-		nextnp = np->n_next;
-		free(np->n_name);
-		freerules(np->n_rule);
-		free(np);
+	for (i = 0; i < HTABSIZE; i++) {
+		for (np = namehead[i]; np; np = nextnp) {
+			nextnp = np->n_next;
+			free(np->n_name);
+			freerules(np->n_rule);
+			free(np);
+		}
 	}
 }
 #endif

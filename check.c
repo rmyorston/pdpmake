@@ -34,34 +34,38 @@ print_commands(struct rule *rp)
 void
 print_details(void)
 {
+	int i;
 	struct macro *mp;
 	struct name *np;
 	struct rule *rp;
 
-	for (mp = macrohead; mp; mp = mp->m_next)
-		printf("%s = %s\n", mp->m_name, mp->m_val);
+	for (i = 0; i < HTABSIZE; i++)
+		for (mp = macrohead[i]; mp; mp = mp->m_next)
+			printf("%s = %s\n", mp->m_name, mp->m_val);
 	putchar('\n');
 
-	for (np = namehead; np; np = np->n_next) {
-		if (!(np->n_flag & N_DOUBLE)) {
-			print_name(np);
-			for (rp = np->n_rule; rp; rp = rp->r_next) {
-				print_prerequisites(rp);
-			}
-			putchar('\n');
-
-			for (rp = np->n_rule; rp; rp = rp->r_next) {
-				print_commands(rp);
-			}
-			putchar('\n');
-		} else {
-			for (rp = np->n_rule; rp; rp = rp->r_next) {
+	for (i = 0; i < HTABSIZE; i++) {
+		for (np = namehead[i]; np; np = np->n_next) {
+			if (!(np->n_flag & N_DOUBLE)) {
 				print_name(np);
-				print_prerequisites(rp);
+				for (rp = np->n_rule; rp; rp = rp->r_next) {
+					print_prerequisites(rp);
+				}
 				putchar('\n');
 
-				print_commands(rp);
+				for (rp = np->n_rule; rp; rp = rp->r_next) {
+					print_commands(rp);
+				}
 				putchar('\n');
+			} else {
+				for (rp = np->n_rule; rp; rp = rp->r_next) {
+					print_name(np);
+					print_prerequisites(rp);
+					putchar('\n');
+
+					print_commands(rp);
+					putchar('\n');
+				}
 			}
 		}
 	}

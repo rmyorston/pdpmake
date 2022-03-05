@@ -136,10 +136,12 @@ struct macro {
 	uint8_t m_level;		// Level at which macro was created
 };
 
+#define HTABSIZE 199
+
 extern const char *myname;
 extern const char *makefile;
-extern struct name *namehead;
-extern struct macro *macrohead;
+extern struct name *namehead[HTABSIZE];
+extern struct macro *macrohead[HTABSIZE];
 extern struct name *firstname;
 extern struct name *target;
 extern uint32_t opts;
@@ -184,3 +186,4 @@ char *xconcat3(const char *s1, const char *s2, const char *s3);
 char *xstrdup(const char *s);
 char *xstrndup(const char *s, size_t n);
 char *xappendword(const char *str, const char *word);
+unsigned int getbucket(const char *name);

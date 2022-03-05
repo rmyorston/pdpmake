@@ -103,3 +103,14 @@ xappendword(const char *str, const char *word)
 	free((void *)str);
 	return newstr;
 }
+
+unsigned int
+getbucket(const char *name)
+{
+	unsigned int hashval = 0;
+	const unsigned char *p = (unsigned char *)name;
+
+	while (*p)
+		hashval ^= (hashval << 5) + (hashval >> 2) + *p++;
+	return hashval % HTABSIZE;
+}
