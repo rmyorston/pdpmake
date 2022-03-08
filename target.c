@@ -123,7 +123,7 @@ newname(const char *name)
 		namehead[bucket] = np;
 		np->n_name = xstrdup(name);
 		np->n_rule = NULL;
-		np->n_time = 0;
+		np->n_tim = (struct timespec){0, 0};
 		np->n_flag = 0;
 	}
 	return np;

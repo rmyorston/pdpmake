@@ -157,13 +157,17 @@ modtime(struct name *np)
 	name = splitlib(np->n_name, &member);
 	if (member) {
 		// Looks like library(member)
-		np->n_time = artime(name, member);
+		np->n_tim.tv_sec = artime(name, member);
+		np->n_tim.tv_nsec = 0;
 	} else if (stat(name, &info) < 0) {
 		if (errno != ENOENT)
 			error("can't open %s: %s", name, strerror(errno));
-		np->n_time = 0;
+		np->n_tim.tv_sec = 0;
+		np->n_tim.tv_nsec = 0;
 	}
-	else
-		np->n_time = info.st_mtime;
+	else {
+		np->n_tim.tv_sec = info.st_mtim.tv_sec;
+		np->n_tim.tv_nsec = info.st_mtim.tv_nsec;
+	}
 	free(name);
 }

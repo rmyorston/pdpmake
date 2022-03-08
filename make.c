@@ -131,6 +131,33 @@ make1(struct name *np, struct cmd *cp, char *newer, struct name *implicit)
 }
 
 /*
+ * Determine if the modification time of a target, t, is less than
+ * that of a prerequisite, p.  If the tv_nsec member of either is
+ * exactly 0 we assume (possibly incorrectly) that the time resolution
+ * is 1 second and only compare tv_sec values.
+ */
+static int
+timespec_le(const struct timespec *t, const struct timespec *p)
+{
+	if (t->tv_nsec == 0 || p->tv_nsec == 0)
+		return t->tv_sec <= p->tv_sec;
+	else if (t->tv_sec < p->tv_sec)
+		return TRUE;
+	else if (t->tv_sec == p->tv_sec)
+		return t->tv_nsec <= p->tv_nsec;
+	return FALSE;
+}
+
+/*
+ * Return the greater of two struct timespecs
+ */
+static const struct timespec *
+timespec_max(const struct timespec *t, const struct timespec *p)
+{
+	return timespec_le(t, p) ? p : t;
+}
+
+/*
  * Recursive routine to make a target.
  */
 int
@@ -142,7 +169,7 @@ make(struct name *np, int level)
 	struct rule imprule;
 	struct cmd *sc_cmd = NULL;	// commands for single-colon rule
 	char *newer = NULL;
-	time_t dtime = 1;
+	struct timespec dtim = {1, 0};
 	bool didsomething = 0;
 	bool estat = 0;	// 0 exit status is success
 
@@ -152,7 +179,7 @@ make(struct name *np, int level)
 		error("circular dependency for %s", np->n_name);
 	np->n_flag |= N_DOING;
 
-	if (!np->n_time)
+	if (!np->n_tim.tv_sec)
 		modtime(np);		// Get modtime of this file
 
 	if (!(np->n_flag & N_DOUBLE)) {
@@ -168,7 +195,7 @@ make(struct name *np, int level)
 		}
 
 		// As a last resort check for a default rule
-		if (!(np->n_flag & N_TARGET) && np->n_time == 0L) {
+		if (!(np->n_flag & N_TARGET) && np->n_tim.tv_sec == 0) {
 			sc_cmd = getcmd(findname(".DEFAULT"));
 			if (!sc_cmd)
 				error("don't know how to make %s", np->n_name);
@@ -205,7 +232,7 @@ make(struct name *np, int level)
 			}
 			// A rule with no prerequisities is executed unconditionally.
 			if (!rp->r_dep)
-				dtime = np->n_time;
+				dtim = np->n_tim;
 		}
 #endif
 		for (dp = rp->r_dep; dp; dp = dp->d_next) {
@@ -214,16 +241,16 @@ make(struct name *np, int level)
 
 			// Make a string listing prerequisites newer than target
 			// (but not if we were invoked with -q).
-			if (!quest && np->n_time <= dp->d_name->n_time)
+			if (!quest && timespec_le(&np->n_tim, &dp->d_name->n_tim))
 				newer = xappendword(newer, dp->d_name->n_name);
-			dtime = MAX(dtime, dp->d_name->n_time);
+			dtim = *timespec_max(&dtim, &dp->d_name->n_tim);
 		}
 #if ENABLE_FEATURE_MAKE_EXTENSIONS
 		if ((np->n_flag & N_DOUBLE)) {
-			if (!quest && np->n_time <= dtime) {
+			if (!quest && timespec_le(&np->n_tim, &dtim)) {
 				if (estat == 0) {
 					estat = make1(np, rp->r_cmd, newer, locdep);
-					dtime = 1;
+					dtim = (struct timespec){1, 0};
 					didsomething = 1;
 				}
 				free(newer);
@@ -245,17 +272,17 @@ make(struct name *np, int level)
 	np->n_flag &= ~N_DOING;
 
 	if (quest) {
-		if (np->n_time <= dtime) {
-			time(&np->n_time);
+		if (timespec_le(&np->n_tim, &dtim)) {
+			clock_gettime(CLOCK_REALTIME, &np->n_tim);
 			return 1;	// 1 means rebuild is needed
 		}
-	} else if (np->n_time <= dtime && !(np->n_flag & N_DOUBLE)) {
+	} else if (timespec_le(&np->n_tim, &dtim) && !(np->n_flag & N_DOUBLE)) {
 		if (estat == 0) {
 			if (!sc_cmd) {
 				warning("nothing to be done for %s", np->n_name);
 			} else {
 				estat = make1(np, sc_cmd, newer, impdep);
-				time(&np->n_time);
+				clock_gettime(CLOCK_REALTIME, &np->n_tim);
 			}
 		} else {
 			warning("'%s' not built due to errors", np->n_name);

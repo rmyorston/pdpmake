@@ -68,9 +68,9 @@ dyndep(struct name *np, struct rule *imprule)
 			if (sp && sp->n_rule) {
 				// Generate a name for an implicit prerequisite
 				pp = namecat(base, newsuff, TRUE);
-				if (!pp->n_time)
+				if (!pp->n_tim.tv_sec)
 					modtime(pp);
-				if ((!chain && (pp->n_time || getcmd(pp))) ||
+				if ((!chain && (pp->n_tim.tv_sec || getcmd(pp))) ||
 						(chain && dyndep(pp, NULL))) {
 					// Prerequisite exists or we know how to make it
 					if (imprule) {

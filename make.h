@@ -87,7 +87,7 @@ struct name {
 	struct name *n_next;	// Next in the list of names
 	char *n_name;			// Called
 	struct rule *n_rule;	// Rules to build this (prerequisites/commands)
-	time_t n_time;			// Modification time of this name
+	struct timespec n_tim;	// Modification time of this name
 	uint8_t n_flag;			// Info about the name
 };
 
