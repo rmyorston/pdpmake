@@ -155,21 +155,19 @@ dyndep(struct name *np, struct rule *imprule)
 char *
 getrules(char *s, int size)
 {
-	char *r;
-	static const char *pos = NULL;
+	char *r = s;
+	static const char *rulepos = NULL;
 
-	if (pos == NULL)
-		pos = (RULES MACROS) + (norules ? sizeof(RULES) - 1 : 0);
+	if (rulepos == NULL)
+		rulepos = (RULES MACROS) + (norules ? sizeof(RULES) - 1 : 0);
 
-	if (*pos == '\0')
+	if (*rulepos == '\0')
 		return NULL;
 
-	r = s;
 	while (--size) {
-		*s++ = *pos;
-		if (*pos++ == '\n')
+		if ((*r++ = *rulepos++) == '\n')
 			break;
 	}
-	*s = '\0';
-	return r;
+	*r = '\0';
+	return s;
 }
