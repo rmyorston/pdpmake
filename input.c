@@ -538,6 +538,44 @@ process_command(char *s)
 	return s;
 }
 
+#if ENABLE_FEATURE_MAKE_EXTENSIONS
+static char *
+run_command(const char *cmd)
+{
+	FILE *fd;
+	char *s, *val = NULL;
+	char buf[256];
+	size_t len = 0, nread;
+
+	if ((fd = popen(cmd, "r")) == NULL)
+		return val;
+
+	for (;;) {
+		nread = fread(buf, 1, sizeof(buf), fd);
+		if (nread == 0)
+			break;
+
+		val = xrealloc(val, len + nread + 1);
+		memcpy(val + len, buf, nread);
+		len += nread;
+		val[len] = '\0';
+	}
+	pclose(fd);
+
+	if (val) {
+		// Remove one newline from the end (BSD compatibility)
+		if (val[len - 1] == '\n')
+			val[len - 1] = '\0';
+		// Other newlines are changed to spaces
+		for (s = val; *s; ++s) {
+			if (*s == '\n')
+				*s = ' ';
+		}
+	}
+	return val;
+}
+#endif
+
 /*
  * Parse input from the makefile and construct a tree structure of it.
  */
@@ -617,9 +655,10 @@ input(FILE *fd)
 			char *newq = NULL;
 			char eq = '\0';
 
-			// As an extension allow ':=', '+=' and '?='.
+			// As an extension allow ':=', '+=', '?=' and '!='.
 			if (!posix && q != str &&
-					(q[-1] == ':' || q[-1] == '+' || q[-1] == '?')) {
+					(q[-1] == ':' || q[-1] == '+' ||
+						q[-1] == '?' || q[-1] == '!')) {
 				eq = q[-1];
 				q[-1] = '\0';
 			}
@@ -647,6 +686,10 @@ input(FILE *fd)
 				struct macro *mp = getmp(a);
 				newq = mp && mp->m_val[0] ? xstrdup(mp->m_val) : NULL;
 				q = newq = xappendword(newq, q);
+			} else if (eq == '!') {
+				char *cmd = expand_macros(q);
+				q = newq = run_command(cmd);
+				free(cmd);
 			}
 #endif
 			setmacro(a, q, (useenv || fd == NULL) ? 4 : 3);
