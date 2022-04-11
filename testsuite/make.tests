@@ -121,4 +121,14 @@ testing "Chained inference rules" \
 	cp $< $*.s
 '
 rm -f target.?
+
+# Assign the output of a shell command to a macro.
+testing "Shell assignment" \
+	"make -f -" \
+	"1 2 3   4\n" "" '\
+hello != echo 1; echo 2; echo 3; echo; echo
+
+target:
+	@echo "$(hello) 4"
+'
 SKIP=
