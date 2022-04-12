@@ -132,9 +132,16 @@ struct macro {
 	struct macro *m_next;	// Next variable
 	char *m_name;			// Its name
 	char *m_val;			// Its value
+#if ENABLE_FEATURE_MAKE_EXTENSIONS
+	bool m_simple;			// Simply-expanded macro set using :=
+#endif
 	bool m_flag;			// Infinite loop check
 	uint8_t m_level;		// Level at which macro was created
 };
+
+// Flag passed to setmacro() to indicate that a simply-expanded macro
+// is being defined.
+#define M_SIMPLE 8
 
 #define HTABSIZE 199
 

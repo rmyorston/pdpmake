@@ -21,7 +21,14 @@ setmacro(const char *name, const char *val, int level)
 {
 	struct macro *mp;
 	const char *s;
+#if ENABLE_FEATURE_MAKE_EXTENSIONS
+	bool simple = FALSE;
 
+	if ((level & M_SIMPLE)) {
+		simple = TRUE;
+		level &= ~M_SIMPLE;
+	}
+#endif
 	for (s = name; *s; ++s) {
 		if (*s == '=' || isspace(*s)) {
 			error("invalid macro name");
@@ -46,6 +53,9 @@ setmacro(const char *name, const char *val, int level)
 		mp->m_name = xstrdup(name);
 		mp->m_level = level;
 	}
+#if ENABLE_FEATURE_MAKE_EXTENSIONS
+	mp->m_simple = simple;
+#endif
 	mp->m_val = xstrdup(val ? val : "");
 }
 

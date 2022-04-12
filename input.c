@@ -651,8 +651,10 @@ input(FILE *fd)
 		// Check for a macro definition
 		q = find_char(str, '=');
 		if (q != NULL) {
+			int level = (useenv || fd == NULL) ? 4 : 3;
 #if ENABLE_FEATURE_MAKE_EXTENSIONS
 			char *newq = NULL;
+			char *rhs;
 			char eq = '\0';
 
 			// As an extension allow ':=', '+=', '?=' and '!='.
@@ -681,18 +683,30 @@ input(FILE *fd)
 			} else if (eq == ':') {
 				// Expand right-hand side of assignment
 				q = newq = expand_macros(q);
+				level |= M_SIMPLE;
 			} else if (eq == '+') {
 				// Append to current value
 				struct macro *mp = getmp(a);
 				newq = mp && mp->m_val[0] ? xstrdup(mp->m_val) : NULL;
-				q = newq = xappendword(newq, q);
+				if (mp->m_simple) {
+					// Expand right-hand side of assignment (GNU make
+					// compatibility)
+					rhs = expand_macros(q);
+					level |= M_SIMPLE;
+				} else {
+					rhs = q;
+				}
+				newq = xappendword(newq, rhs);
+				if (rhs != q)
+					free(rhs);
+				q = newq;
 			} else if (eq == '!') {
 				char *cmd = expand_macros(q);
 				q = newq = run_command(cmd);
 				free(cmd);
 			}
 #endif
-			setmacro(a, q, (useenv || fd == NULL) ? 4 : 3);
+			setmacro(a, q, level);
 #if ENABLE_FEATURE_MAKE_EXTENSIONS
 			free(newq);
 #endif

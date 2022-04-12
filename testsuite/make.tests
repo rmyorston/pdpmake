@@ -131,4 +131,31 @@ hello != echo 1; echo 2; echo 3; echo; echo
 target:
 	@echo "$(hello) 4"
 '
+
+# GNU make tracks whether a macro is simply- or recursively-expanded
+# and treats += differently as a result.
+testing "Appending to simply-expanded macro" \
+	"make -f -" \
+	"hello 1 2 3\nhello 4 4\n" "" '\
+world = 1
+hello := hello $(world)
+world = 2
+hello += $(world)
+world = 3
+hello += $(world)
+world = 4
+
+world = 1
+reset := hello $(world)
+world = 2
+# No longer simply-expanded
+reset = hello $(world)
+world = 3
+reset += $(world)
+world = 4
+
+target:
+	@echo $(hello)
+	@echo $(reset)
+'
 SKIP=
