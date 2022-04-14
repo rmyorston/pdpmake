@@ -62,7 +62,7 @@ target:
 
 # It should be possible for an inference rule to determine that a
 # prerequisite can be created using an explicit rule.
-rm -f x.p x.q
+mkdir make.tempdir && cd make.tempdir || exit 1
 testing "Inference rule with explicit rule for prerequisite" \
 	"make -f -" "touch x.p\ncat x.p >x.q\n" "" '\
 .SUFFIXES: .p .q
@@ -72,7 +72,7 @@ x.p:
 .p.q:
 	cat $< >$@
 '
-rm -f x.p x.q
+cd .. || exit 1; rm -rf make.tempdir 2>/dev/null
 
 # =================================================================
 # The following tests require extensions to be enabled.  They're
@@ -107,7 +107,7 @@ target:
 '
 
 # Use chained inference rules to determine prerequisites.
-rm -f target.?
+mkdir make.tempdir && cd make.tempdir || exit 1
 touch target.p
 testing "Chained inference rules" \
 	"make -f - target.s" \
@@ -120,7 +120,7 @@ testing "Chained inference rules" \
 .r.s:
 	cp $< $*.s
 '
-rm -f target.?
+cd .. || exit 1; rm -rf make.tempdir 2>/dev/null
 
 # Assign the output of a shell command to a macro.
 testing "Shell assignment" \
@@ -158,4 +158,16 @@ target:
 	@echo $(hello)
 	@echo $(reset)
 '
+
+# make supports *, ? and [] wildcards in targets and prerequisites
+mkdir make.tempdir && cd make.tempdir || exit 1
+touch t1a t2aa t3b
+touch s1a s2aa s3b
+testing "Expand wildcards in filenames" \
+	"make -f - t1a t2aa t3b" \
+	"t1a s1a s2aa s3b\nt2aa s1a s2aa s3b\nt3b s1a s2aa s3b\n" "" '\
+t1? t2* t3[abc]: s1? s2* s3[abc]
+	@echo $@ $?
+'
+cd .. || exit 1; rm -rf make.tempdir 2>/dev/null
 SKIP=

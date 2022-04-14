@@ -2,6 +2,7 @@
  * Parse a makefile
  */
 #include "make.h"
+#include <glob.h>
 
 int ilevel;	// Level of nesting of included files
 int lineno;	// Physical line number in file
@@ -574,6 +575,62 @@ run_command(const char *cmd)
 	}
 	return val;
 }
+
+/*
+ * Check for an unescaped wildcard character
+ */
+static int wildchar(const char *p)
+{
+	while (*p) {
+		switch (*p) {
+		case '?':
+		case '*':
+		case '[':
+			return 1;
+		case '\\':
+			if (p[1] != '\0')
+				++p;
+			break;
+		}
+		++p;
+	}
+	return 0;
+}
+
+/*
+ * Expand any wildcards in a pattern.  Return TRUE if a match is
+ * found, in which case the caller should call globfree() on the
+ * glob_t structure.
+ */
+static int
+wildcard(char *p, glob_t *gd)
+{
+	int ret;
+	char *s;
+
+	// Don't call glob() if there are no wildcards.
+	if (!wildchar(p)) {
+ nomatch:
+		// Remove backslashes from the name.
+		for (s = p; *p; ++p) {
+			if (*p == '\\' && p[1] != '\0')
+				continue;
+			*s++ = *p;
+		}
+		*s = '\0';
+		return 0;
+	}
+
+	memset(gd, 0, sizeof(*gd));
+	ret = glob(p, GLOB_NOSORT, NULL, gd);
+	if (ret == GLOB_NOMATCH) {
+		globfree(gd);
+		goto nomatch;
+	} else if (ret != 0) {
+		error("glob error for '%s'", p);
+	}
+	return 1;
+}
 #endif
 
 /*
@@ -593,6 +650,9 @@ input(FILE *fd)
 	uint8_t old_clevel = clevel;
 	bool minus, dbl;
 	char *lib = NULL;
+	glob_t gd;
+	int nfile, i;
+	char **files;
 #else
 	const bool minus = FALSE;
 	const bool dbl = FALSE;
@@ -744,11 +804,15 @@ input(FILE *fd)
 		// Create list of prerequisites
 		dp = NULL;
 		while (((p = gettok(&q)) != NULL)) {
-#if ENABLE_FEATURE_MAKE_EXTENSIONS
-			// Allow prerequisites of form library(member1 member2).
-			// Leading and trailing spaces in the brackets are skipped.
+#if !ENABLE_FEATURE_MAKE_EXTENSIONS
+			np = newname(p);
+			dp = newdep(np, dp);
+#else
 			char *newp = NULL;
+
 			if (!posix) {
+				// Allow prerequisites of form library(member1 member2).
+				// Leading and trailing spaces in the brackets are skipped.
 				if (!lib) {
 					s = strchr(p, '(');
 					if (s && !ends_with_bracket(s) && strchr(q, ')')) {
@@ -772,12 +836,22 @@ input(FILE *fd)
 					p = newp = xconcat3(lib, p, ")");
 				}
 			}
-#endif
-			np = newname(p);
-			dp = newdep(np, dp);
-#if ENABLE_FEATURE_MAKE_EXTENSIONS
+
+			// If not in POSIX mode expand wildcards in the name.
+			nfile = 1;
+			files = &p;
+			if (!posix && wildcard(p, &gd)) {
+				nfile = gd.gl_pathc;
+				files = gd.gl_pathv;
+			}
+			for (i = 0; i < nfile; ++i) {
+				np = newname(files[i]);
+				dp = newdep(np, dp);
+			}
+			if (files != &p)
+				globfree(&gd);
 			free(newp);
-#endif
+#endif /* ENABLE_FEATURE_MAKE_EXTENSIONS */
 		}
 #if ENABLE_FEATURE_MAKE_EXTENSIONS
 		lib = NULL;
@@ -796,21 +870,40 @@ input(FILE *fd)
 		count = 0;
 		seen_inference = FALSE;
 		while ((p = gettok(&q)) != NULL) {
-			int ttype = target_type(p);
-
-			np = newname(p);
-			if (ttype != T_NORMAL) {
-				if (ttype == T_INFERENCE IF_FEATURE_MAKE_EXTENSIONS(&& posix)) {
-					if (semicolon_cmd)
-						error_in_inference_rule("'; command'");
-					seen_inference = TRUE;
-				}
-				np->n_flag |= N_SPECIAL;
-			} else if (!firstname) {
-				firstname = np;
+#if ENABLE_FEATURE_MAKE_EXTENSIONS
+			// If not in POSIX mode expand wildcards in the name.
+			nfile = 1;
+			files = &p;
+			if (!posix && wildcard(p, &gd)) {
+				nfile = gd.gl_pathc;
+				files = gd.gl_pathv;
 			}
-			addrule(np, dp, cp, dbl);
-			count++;
+			for (i = 0; i < nfile; ++i)
+# define p files[i]
+#endif
+			{
+				int ttype = target_type(p);
+
+				np = newname(p);
+				if (ttype != T_NORMAL) {
+					if (ttype == T_INFERENCE
+							IF_FEATURE_MAKE_EXTENSIONS(&& posix)) {
+						if (semicolon_cmd)
+							error_in_inference_rule("'; command'");
+						seen_inference = TRUE;
+					}
+					np->n_flag |= N_SPECIAL;
+				} else if (!firstname) {
+					firstname = np;
+				}
+				addrule(np, dp, cp, dbl);
+				count++;
+			}
+#if ENABLE_FEATURE_MAKE_EXTENSIONS
+# undef p
+			if (files != &p)
+				globfree(&gd);
+#endif
 		}
 		if (seen_inference && count != 1)
 			error_in_inference_rule("multiple targets");
