@@ -305,7 +305,15 @@ main(int argc, char **argv)
 		opts = process_options(fargc, fargv, TRUE);
 		fargv = fargv0 + optind;
 	}
+	// Reset getopt(3) so we can call it again
+#if 1
 	optind = 0;
+#else
+	// BSD may require this instead:
+	extern int optreset;
+	optind = 1;
+	optreset = 1;
+#endif
 
 	// Process options from the command line
 	opts |= process_options(argc, argv, FALSE);

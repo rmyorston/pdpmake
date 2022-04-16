@@ -3,7 +3,8 @@
 This is an implementation of [POSIX make](https://pubs.opengroup.org/onlinepubs/9699919799/utilities/make.html).
 
 It comes with its own makefile, naturally, and should build on most
-modernish Unix-style systems.
+modernish Unix-style systems.  (Command line options may not work
+properly on BSD:  search for 'BSD' in main.c and adjust to suit.)
 
 In its default configuration only POSIX features are supported.  Some
 extensions can be enabled by setting `ENABLE_FEATURE_MAKE_EXTENSIONS`
