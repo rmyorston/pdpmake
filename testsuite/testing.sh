@@ -41,8 +41,11 @@ export SKIP=
 test x"$ECHO" != x"" || {
 	ECHO="echo"
 	test x"`echo -ne`" = x"" || {
-		echo "Sorry, echo doesn't understand -e -n"
-		exit
+		# Compile and use a replacement 'echo' which understands -e -n
+		ECHO="$PWD/echo-ne"
+		test -x "$ECHO" || {
+			cc -o "$ECHO" echo.c || exit 1
+		}
 	}
 	export ECHO
 }
