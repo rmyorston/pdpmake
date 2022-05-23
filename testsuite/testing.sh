@@ -36,20 +36,6 @@
 export FAILCOUNT=0
 export SKIP=
 
-# Helper for helpers. Oh my...
-
-test x"$ECHO" != x"" || {
-	ECHO="echo"
-	test x"`echo -ne`" = x"" || {
-		# Compile and use a replacement 'echo' which understands -e -n
-		ECHO="$PWD/echo-ne"
-		test -x "$ECHO" || {
-			cc -o "$ECHO" echo.c || exit 1
-		}
-	}
-	export ECHO
-}
-
 # Helper functions
 
 optional()
@@ -85,12 +71,12 @@ testing()
     return 0
   fi
 
-  $ECHO -ne "$3" > expected
-  $ECHO -ne "$4" > input
+  printf '%b' "$3" > expected
+  printf '%b' "$4" > input
   [ -z "$VERBOSE" ] || echo ======================
-  [ -z "$VERBOSE" ] || echo "echo -ne '$4' >input"
-  [ -z "$VERBOSE" ] || echo "echo -ne '$5' | $2"
-  $ECHO -ne "$5" | eval "$2" > actual
+  [ -z "$VERBOSE" ] || echo "printf '%b' '$4' >input"
+  [ -z "$VERBOSE" ] || echo "printf '%b' '$5' | $2"
+  printf '%b' "$5" | eval "$2" > actual
   RETVAL=$?
 
   if cmp expected actual >/dev/null 2>/dev/null
