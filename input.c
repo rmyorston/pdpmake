@@ -748,7 +748,7 @@ input(FILE *fd)
 				// Append to current value
 				struct macro *mp = getmp(a);
 				newq = mp && mp->m_val[0] ? xstrdup(mp->m_val) : NULL;
-				if (mp->m_simple) {
+				if (mp && mp->m_simple) {
 					// Expand right-hand side of assignment (GNU make
 					// compatibility)
 					rhs = expand_macros(q);
