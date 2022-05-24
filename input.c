@@ -215,8 +215,8 @@ expand_macros(const char *str)
 				// from s to t inclusive.
 				*s = '\0';
 				newexp = xconcat3(exp, modified, t + 1);
-				free(exp);
 				t = newexp + (s - exp) + strlen(modified) - 1;
+				free(exp);
 				exp = newexp;
 			} else {
 				// Macro wasn't expanded or expanded to nothing.
