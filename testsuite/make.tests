@@ -170,4 +170,59 @@ t1? t2* t3[abc]: s1? s2* s3[abc]
 	@echo $@ $?
 '
 cd .. || exit 1; rm -rf make.tempdir 2>/dev/null
+
+# basic pattern macro expansion
+testing "Basic pattern macro expansion" \
+	"make -f -" \
+	"obj/util.o obj/main.o\n" "" '
+SRC = src/util.c src/main.c
+OBJ = $(SRC:src/%.c=obj/%.o)
+
+target:
+	@echo $(OBJ)
+'
+
+# pattern macro expansion; match any value
+testing "Pattern macro expansion; match any value" \
+	"make -f -" \
+	"any_value.o\n" "" '
+SRC = any_value
+OBJ = $(SRC:%=%.o)
+
+target:
+	@echo $(OBJ)
+'
+
+# pattern macro expansion with empty rvalue
+testing "Pattern macro expansion with empty rvalue" \
+	"make -f -" \
+	"\n" "" '
+SRC = util.c main.c
+OBJ = $(SRC:%.c=)
+
+target:
+	@echo $(OBJ)
+'
+
+# pattern macro expansion with multiple <percent> in rvalue
+testing "Pattern macro expansion with multiple <percent> in rvalue" \
+	"make -f -" \
+	"main%%\n" "" '
+SRC = main.c
+OBJ = $(SRC:%.c=%%%)
+
+target:
+	@echo $(OBJ)
+'
+
+# pattern macro expansion; zero match
+testing "Pattern macro expansion; zero match" \
+	"make -f -" \
+	"nsnp\n" "" '
+WORD = osop
+REPL = $(WORD:os%op=ns%np)
+
+target:
+	@echo $(REPL)
+'
 SKIP=
