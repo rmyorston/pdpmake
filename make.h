@@ -49,7 +49,7 @@ extern char **environ;
 #define MAX(a,b)	((a)>(b)?(a):(b))
 
 #define OPTSTR1 "eiknqrsSt"
-#define OPTSTR2 "pf:"
+#define OPTSTR2 "pf:C:"
 
 enum {
 	OPT_e = (1 << 0),
@@ -64,12 +64,13 @@ enum {
 	// These options aren't allowed in MAKEFLAGS
 	OPT_p = (1 << 9),
 	OPT_f = (1 << 10),
+	OPT_C = (1 << 11),
 	// OPT_precious isn't a command line option and must be last
-	OPT_precious = (1 << 11),
+	OPT_precious = (1 << 12),
 };
 
 // Options that aren't included in MAKEFLAGS
-#define OPT_MASK  (~(OPT_f | OPT_p | OPT_S | OPT_precious))
+#define OPT_MASK  (~(OPT_C | OPT_f | OPT_p | OPT_S | OPT_precious))
 
 #define useenv    (opts & OPT_e)
 #define ignore    (opts & OPT_i)
