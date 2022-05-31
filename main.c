@@ -1,6 +1,7 @@
 /*
- * make [-f makefile] [-eiknpqrsSt] [macro=val ...] [target ...]
+ * make [-C path] [-f makefile] [-eiknpqrsSt] [macro=val ...] [target ...]
  *
+ *  -C  Change directory to path
  *  -f  Makefile name
  *  -e  Environment variables override macros in makefiles
  *  -i  Ignore exit status
@@ -28,8 +29,8 @@ static void
 usage(void)
 {
 	fprintf(stderr,
-		"Usage: %s [-f makefile] [-eiknpqrsSt] [macro=val ...] [target ...]\n",
-		myname);
+		"Usage: %s [-C path] [-f makefile] [-eiknpqrsSt] [macro=val ...]"
+		"[target ...]\n", myname);
 	exit(2);
 }
 
@@ -45,6 +46,14 @@ process_options(int argc, char **argv, int from_env)
 
 	while ((opt = getopt(argc, argv, OPTSTR1 OPTSTR2)) != -1) {
 		switch(opt) {
+		case 'C':
+			if (!from_env) {
+				if (chdir(optarg) == -1) {
+					error("can't chdir to %s: %s", optarg, strerror(errno));
+				}
+				flags |= OPT_C;
+			}
+			break;
 		case 'f':	// Alternate file name
 			if (!from_env) {
 				makefiles = newcmd(optarg, makefiles);
