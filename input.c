@@ -57,52 +57,93 @@ skip_macro(const char *s)
 	return (char *)s;
 }
 
+#if !ENABLE_FEATURE_MAKE_EXTENSIONS
+# define modify_words(v, m, l, fp, rp, fs, rs) modify_words(v, m, l, fs, rs)
+#endif
 /*
  * Process each whitespace-separated word in the input string:
  *
  * - replace paths with their directory or filename part
- * - replace suffix 'find' with 'replace'
+ * - replace prefixes and suffixes
  *
  * Returns an allocated string or NULL if the input is unmodified.
  */
 static char *
-modify_words(const char *val, int modifier, const char *find, const char *repl)
+modify_words(const char *val, int modifier, size_t lenf,
+				const char *find_pref, const char *repl_pref,
+				const char *find_suff, const char *repl_suff)
 {
 	char *s, *copy, *word, *sep, *newword, *buf = NULL;
+#if ENABLE_FEATURE_MAKE_EXTENSIONS
+	size_t find_pref_len = 0, find_suff_len = 0;
+#endif
 
-	if (modifier || repl) {
-		s = copy = xstrdup(val);
-		while ((word = gettok(&s)) != NULL) {
-			newword = NULL;
-			if (modifier) {
-				sep = strrchr(word, '/');
-				if (modifier == 'D') {
-					if (!sep) {
-						word[0] = '.';	// no '/', return "."
-						sep = word + 1;
-					} else if (sep == word) {
-						// '/' at start of word, return "/"
-						sep = word + 1;
-					}
-					// else terminate at separator
-					*sep = '\0';
-				} else if (/* modifier == 'F' && */ sep) {
-					word = sep + 1;
-				}
-			}
-			if (repl) {
-				size_t lenw = strlen(word);
-				size_t lenf = strlen(find);
-				if (lenw >= lenf && strcmp(word + lenw - lenf, find) == 0) {
-					word[lenw - lenf] = '\0';
-					word = newword = xconcat3(word, repl, "");
-				}
-			}
-			buf = xappendword(buf, word);
-			free(newword);
-		}
-		free(copy);
+	if (!modifier && !lenf)
+		return buf;
+
+#if ENABLE_FEATURE_MAKE_EXTENSIONS
+	if (find_pref) {
+		// get length of find prefix, e.g: src/
+		find_pref_len = strlen(find_pref);
+		// get length of find suffix, e.g: .c
+		find_suff_len = lenf - find_pref_len - 1;
 	}
+#endif
+
+	s = copy = xstrdup(val);
+	while ((word = gettok(&s)) != NULL) {
+		newword = NULL;
+		if (modifier) {
+			sep = strrchr(word, '/');
+			if (modifier == 'D') {
+				if (!sep) {
+					word[0] = '.';	// no '/', return "."
+					sep = word + 1;
+				} else if (sep == word) {
+					// '/' at start of word, return "/"
+					sep = word + 1;
+				}
+				// else terminate at separator
+				*sep = '\0';
+			} else if (/* modifier == 'F' && */ sep) {
+				word = sep + 1;
+			}
+		}
+		if (lenf) {
+			size_t lenw = strlen(word);
+#if ENABLE_FEATURE_MAKE_EXTENSIONS
+			// This code implements pattern macro expansions:
+			//    https://austingroupbugs.net/view.php?id=519
+			//
+			// find: <prefix>%<suffix>
+			// example: src/%.c
+			if (!posix && lenw >= lenf - 1 && find_pref) {
+				// If prefix and suffix of word match find_pref and
+				// find_suff, then do substitution.
+				if (strncmp(word, find_pref, find_pref_len) == 0 &&
+						strcmp(word + lenw - find_suff_len, find_suff) == 0) {
+					// replace: <prefix>[%<suffix>]
+					// example: build/%.o or build/all.o (notice no %)
+					// If repl_suff is NULL, replace whole word with repl_pref.
+					if (!repl_suff) {
+						word = newword = xstrdup(repl_pref);
+					} else {
+						word[lenw - find_suff_len] = '\0';
+						word = newword = xconcat3(repl_pref,
+									word + find_pref_len, repl_suff);
+					}
+				}
+			} else
+#endif
+			if (lenw >= lenf && strcmp(word + lenw - lenf, find_suff) == 0) {
+				word[lenw - lenf] = '\0';
+				word = newword = xconcat3(word, repl_suff, "");
+			}
+		}
+		buf = xappendword(buf, word);
+		free(newword);
+	}
+	free(copy);
 	return buf;
 }
 
@@ -131,7 +172,11 @@ expand_macros(const char *str)
 {
 	char *exp, *newexp, *s, *t, *p, *q, *name;
 	char *find, *replace, *modified;
-	char *expval, *expfind, *exprepl;
+	char *expval, *expfind, *find_suff, *repl_suff;
+#if ENABLE_FEATURE_MAKE_EXTENSIONS
+	char *find_pref = NULL, *repl_pref = NULL;
+#endif
+	size_t lenf;
 	char modifier;
 	struct macro *mp;
 
@@ -156,14 +201,32 @@ expand_macros(const char *str)
 				name[1] = '\0';
 			}
 
-			// Only do suffix replacement if both ':' and '=' are found.
-			expfind = exprepl = NULL;
-			if ((find = find_char(name, ':')) &&
-					(replace = find_char(find, '='))) {
+			// Only do suffix replacement or pattern macro expansion
+			// if both ':' and '=' are found.  This is indicated by
+			// lenf != 0.
+			expfind = NULL;
+			find_suff = repl_suff = NULL;
+			lenf = 0;
+			if ((find = find_char(name, ':'))) {
 				*find++ = '\0';
-				*replace++ = '\0';
 				expfind = expand_macros(find);
-				exprepl = expand_macros(replace);
+				if ((replace = find_char(expfind, '='))) {
+					*replace++ = '\0';
+					lenf = strlen(expfind);
+#if ENABLE_FEATURE_MAKE_EXTENSIONS
+					if ((find_suff = strchr(expfind, '%'))) {
+						find_pref = expfind;
+						repl_pref = replace;
+						*find_suff++ = '\0';
+						if ((repl_suff = strchr(replace, '%')))
+							*repl_suff++ = '\0';
+					} else
+#endif
+					{
+						find_suff = expfind;
+						repl_suff = replace;
+					}
+				}
 			}
 
 			p = q = name;
@@ -200,7 +263,8 @@ expand_macros(const char *str)
 				mp->m_flag = TRUE;
 				expval = expand_macros(mp->m_val);
 				mp->m_flag = FALSE;
-				modified = modify_words(expval, modifier, expfind, exprepl);
+				modified = modify_words(expval, modifier, lenf,
+								find_pref, repl_pref, find_suff, repl_suff);
 				if (modified)
 					free(expval);
 				else
@@ -208,7 +272,6 @@ expand_macros(const char *str)
 			}
 			free(name);
 			free(expfind);
-			free(exprepl);
 
 			if (modified && *modified) {
 				// The text to be replaced by the macro expansion is
