@@ -225,4 +225,40 @@ REPL = $(WORD:os%op=ns%np)
 target:
 	@echo $(REPL)
 '
+
+# Check that MAKE will contain argv[0], e.g make in this case
+testing "Basic MAKE macro expansion" \
+	"make -f -" \
+	"make\n" "" '
+target:
+	@echo $(MAKE)
+'
+
+# Check that MAKE defined as environment variable will overwrite default MAKE
+testing "MAKE macro expansion; overwrite with env macro" \
+	"MAKE=hello make -f -" \
+	"hello\n" "" '
+target:
+	@echo $(MAKE)
+'
+
+# Check that MAKE defined on the command-line will overwrite MAKE defined in
+# Makefile
+testing "MAKE macro expansion; overwrite with command-line macro" \
+	"make -f - MAKE=hello" \
+	"hello\n" "" '
+MAKE = test
+
+target:
+	@echo $(MAKE)
+'
+
+# POSIX draft states that if make was invoked using relative path, MAKE must
+# contain absolute path, not just argv[0]
+testing "MAKE macro expansion; turn relative path into absolute" \
+	"../make -f -" \
+	"ok\n" "" '
+target:
+	@case $(MAKE) in /*) test -e $(MAKE) && echo ok; esac
+'
 SKIP=
