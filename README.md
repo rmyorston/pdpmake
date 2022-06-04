@@ -19,6 +19,7 @@ to 1.  These are largely compatible with GNU make:
  - chained inference rules
  - `*`/`?`/`[]` wildcards for filenames in target rules
  - `$(SRC:%.c=%.o)` pattern macro expansions
+ - special handling of `MAKE` macro
 
 When extensions are enabled adding the `.POSIX` target to your makefile
 will disable them.  Other versions of make tend to allow extensions even
