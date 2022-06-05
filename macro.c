@@ -51,11 +51,11 @@ setmacro(const char *name, const char *val, int level)
 		macrohead[bucket] = mp;
 		mp->m_flag = FALSE;
 		mp->m_name = xstrdup(name);
-		mp->m_level = level;
 	}
 #if ENABLE_FEATURE_MAKE_EXTENSIONS
 	mp->m_simple = simple;
 #endif
+	mp->m_level = level;
 	mp->m_val = xstrdup(val ? val : "");
 }
 

@@ -292,12 +292,28 @@ mark_special(const char *special, uint32_t oflag, uint8_t nflag)
 int
 main(int argc, char **argv)
 {
+#if ENABLE_FEATURE_MAKE_EXTENSIONS
+	const char *path, *argv0;
+#else
+	const char *path = "make";
+#endif
 	char **fargv, **fargv0;
 	int fargc, estat;
 	FILE *ifd;
 	struct cmd *mp;
 
 	myname = basename(*argv);
+
+#if ENABLE_FEATURE_MAKE_EXTENSIONS
+	path = argv0 = argv[0];
+	if (argv[0][0] != '/' && strchr(argv[0], '/')) {
+		// Make relative path absolute
+		path = realpath(argv[0], NULL);
+		if (!path) {
+			error("can't resolve path for %s: %s", argv[0], strerror(errno));
+		}
+	}
+#endif
 
 	// Process options from MAKEFLAGS
 	fargv = fargv0 = expand_makeflags(&fargc);
@@ -323,7 +339,6 @@ main(int argc, char **argv)
 	init_signal(SIGTERM);
 
 	setmacro("$", "$", 0);
-	setmacro("SHELL", "/bin/sh", 4);
 
 	// Process macro definitions from the command line
 	argv = process_macros(argv, 1);
@@ -343,6 +358,13 @@ main(int argc, char **argv)
 
 	// Read built-in rules
 	input(NULL);
+
+	setmacro("SHELL", "/bin/sh", 4);
+	setmacro("MAKE", path, 4);
+#if ENABLE_FEATURE_MAKE_EXTENSIONS
+	if (path != argv0)
+		free((void *)path);
+#endif
 
 #if ENABLE_FEATURE_MAKE_EXTENSIONS
 	first_line = TRUE;
