@@ -136,7 +136,6 @@ dyndep(struct name *np, struct rule *imprule)
 	"	chmod a+x $@\n"
 
 #define MACROS \
-	"MAKE=make\n" \
 	"CC=c99\n" \
 	"CFLAGS=-O1\n" \
 	"FC=fort77\n" \
