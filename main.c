@@ -331,10 +331,8 @@ main(int argc, char **argv)
 	// Process macro definitions from MAKEFLAGS
 	if (fargv) {
 		process_macros(fargv, 2);
-#if ENABLE_FEATURE_CLEAN_UP
 		free(fargv0[1]);
 		free(fargv0);
-#endif
 	}
 
 	// Process macro definitions from the environment
