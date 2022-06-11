@@ -1,7 +1,8 @@
 /*
- * make [-C path] [-f makefile] [-eiknpqrsSt] [macro=val ...] [target ...]
+ * make [--posix] [-C path] [-f makefile] [-eiknpqrsSt] [macro=val ...] [target ...]
  *
- *  -C  Change directory to path
+ *  --posix  Enforce POSIX mode (non-POSIX)
+ *  -C  Change directory to path (non-POSIX)
  *  -f  Makefile name
  *  -e  Environment variables override macros in makefiles
  *  -i  Ignore exit status
@@ -29,8 +30,11 @@ static void
 usage(void)
 {
 	fprintf(stderr,
-		"Usage: %s [-C path] [-f makefile] [-eiknpqrsSt] [macro=val ...]"
-		"[target ...]\n", myname);
+		"Usage: %s"
+		IF_FEATURE_MAKE_EXTENSIONS(" [--posix] [-C path]")
+		" [-f makefile] [-eiknpqrsSt] [macro=val ...]"
+		IF_FEATURE_MAKE_EXTENSIONS("\n\t")
+		" [target ...]\n", myname);
 	exit(2);
 }
 
@@ -46,14 +50,18 @@ process_options(int argc, char **argv, int from_env)
 
 	while ((opt = getopt(argc, argv, OPTSTR1 OPTSTR2)) != -1) {
 		switch(opt) {
+#if ENABLE_FEATURE_MAKE_EXTENSIONS
 		case 'C':
-			if (!from_env) {
+			if (!posix && !from_env) {
 				if (chdir(optarg) == -1) {
 					error("can't chdir to %s: %s", optarg, strerror(errno));
 				}
 				flags |= OPT_C;
+				break;
 			}
+			error("-C not allowed");
 			break;
+#endif
 		case 'f':	// Alternate file name
 			if (!from_env) {
 				makefiles = newcmd(optarg, makefiles);
@@ -302,7 +310,7 @@ int
 main(int argc, char **argv)
 {
 #if ENABLE_FEATURE_MAKE_EXTENSIONS
-	const char *path, *argv0;
+	const char *path, *newpath = NULL;
 #else
 	const char *path = "make";
 #endif
@@ -311,16 +319,35 @@ main(int argc, char **argv)
 	FILE *ifd;
 	struct cmd *mp;
 
+	if (argc == 0) {
+		return EXIT_FAILURE;
+	}
+
 	myname = basename(*argv);
+#if ENABLE_FEATURE_MAKE_EXTENSIONS
+	if (argv[1] && strcmp(argv[1], "--posix") == 0) {
+		argv[1] = argv[0];
+		++argv;
+		--argc;
+		setenv("PDPMAKE_POSIXLY_CORRECT", "", 1);
+		posix = TRUE;
+	} else {
+		posix = getenv("PDPMAKE_POSIXLY_CORRECT") != NULL;
+	}
+#endif
 
 #if ENABLE_FEATURE_MAKE_EXTENSIONS
-	path = argv0 = argv[0];
-	if (argv[0][0] != '/' && strchr(argv[0], '/')) {
-		// Make relative path absolute
-		path = realpath(argv[0], NULL);
-		if (!path) {
-			error("can't resolve path for %s: %s", argv[0], strerror(errno));
+	if (!posix) {
+		path = argv[0];
+		if (argv[0][0] != '/' && strchr(argv[0], '/')) {
+			// Make relative path absolute
+			path = newpath = realpath(argv[0], NULL);
+			if (!path) {
+				error("can't resolve path for %s: %s", argv[0], strerror(errno));
+			}
 		}
+	} else {
+		path = "make";
 	}
 #endif
 
@@ -371,8 +398,7 @@ main(int argc, char **argv)
 	setmacro("SHELL", "/bin/sh", 4);
 	setmacro("MAKE", path, 4);
 #if ENABLE_FEATURE_MAKE_EXTENSIONS
-	if (path != argv0)
-		free((void *)path);
+	free((void *)newpath);
 #endif
 
 #if ENABLE_FEATURE_MAKE_EXTENSIONS

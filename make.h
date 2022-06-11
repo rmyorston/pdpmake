@@ -49,9 +49,18 @@ extern char **environ;
 #define MAX(a,b)	((a)>(b)?(a):(b))
 
 #define OPTSTR1 "eiknqrsSt"
+#if ENABLE_FEATURE_MAKE_EXTENSIONS
 #define OPTSTR2 "pf:C:"
+#else
+#define OPTSTR2 "pf:"
+#endif
 
 enum {
+	OPTBIT_p = 9,
+	OPTBIT_f,
+	IF_FEATURE_MAKE_EXTENSIONS(OPTBIT_C,)
+	OPTBIT_precious,
+
 	OPT_e = (1 << 0),
 	OPT_i = (1 << 1),
 	OPT_k = (1 << 2),
@@ -62,11 +71,11 @@ enum {
 	OPT_S = (1 << 7),
 	OPT_t = (1 << 8),
 	// These options aren't allowed in MAKEFLAGS
-	OPT_p = (1 << 9),
-	OPT_f = (1 << 10),
-	OPT_C = (1 << 11),
+	OPT_p = (1 << OPTBIT_p),
+	OPT_f = (1 << OPTBIT_f),
+	OPT_C = IF_FEATURE_MAKE_EXTENSIONS((1 << OPTBIT_C)) + 0,
 	// OPT_precious isn't a command line option and must be last
-	OPT_precious = (1 << 12),
+	OPT_precious = (1 << OPTBIT_precious),
 };
 
 // Options that aren't included in MAKEFLAGS
