@@ -984,8 +984,10 @@ input(FILE *fd)
 		free(copy);
 		free(expanded);
 #if ENABLE_FEATURE_MAKE_EXTENSIONS
-		if (first_line && findname(".POSIX"))
+		if (first_line && findname(".POSIX")) {
+			setenv("PDPMAKE_POSIXLY_CORRECT", "", 1);
 			posix = TRUE;
+		}
 		first_line = FALSE;
 #endif
 	}
