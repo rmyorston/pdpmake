@@ -24,3 +24,7 @@ to 1.  These are largely compatible with GNU make:
 When extensions are enabled adding the `.POSIX` target to your makefile
 will disable them.  Other versions of make tend to allow extensions even
 in POSIX mode.
+
+Setting the environment variable `PDPMAKE_POSIXLY_CORRECT` (its value
+doesn't matter) or giving the `--posix` option as the first on the
+command line also turn off extensions.
