@@ -261,4 +261,18 @@ testing "MAKE macro expansion; turn relative path into absolute" \
 target:
 	@case $(MAKE) in /*) test -e $(MAKE) && echo ok; esac
 '
+
+# $? contains prerequisites newer than target, file2 in this case
+# $^ has all prerequisites, file1 and file2
+touch -t 202206171200 file1
+touch -t 202206171201 target
+touch -t 202206171202 file2
+testing "Compare \$? and \$^ internal macros" \
+	"make -f -" \
+	"file2\nfile1 file2\n" "" '
+target: file1 file2
+	@echo $?
+	@echo $^
+'
+rm -f target file1 file2
 SKIP=

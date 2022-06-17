@@ -105,14 +105,22 @@ touch(struct name *np)
 	}
 }
 
+#if !ENABLE_FEATURE_MAKE_EXTENSIONS
+# define make1(n, c, o, a, i) make1(n, c, o, i)
+#endif
 static int
-make1(struct name *np, struct cmd *cp, char *newer, struct name *implicit)
+make1(struct name *np, struct cmd *cp, char *oodate, char *allsrc,
+		struct name *implicit)
 {
 	int estat = 0;	// 0 exit status is success
 	char *name, *member = NULL, *base;
 
 	name = splitlib(np->n_name, &member);
-	setmacro("?", newer, 0);
+	setmacro("?", oodate, 0);
+#if ENABLE_FEATURE_MAKE_EXTENSIONS
+	if (!posix)
+		setmacro("^", allsrc, 0);
+#endif
 	setmacro("%", member, 0);
 	setmacro("@", name, 0);
 	if (implicit) {
@@ -168,7 +176,10 @@ make(struct name *np, int level)
 	struct name *impdep = NULL;	// implicit prerequisite
 	struct rule imprule;
 	struct cmd *sc_cmd = NULL;	// commands for single-colon rule
-	char *newer = NULL;
+	char *oodate = NULL;
+#if ENABLE_FEATURE_MAKE_EXTENSIONS
+	char *allsrc = NULL;
+#endif
 	struct timespec dtim = {1, 0};
 	bool didsomething = 0;
 	bool estat = 0;	// 0 exit status is success
@@ -239,22 +250,29 @@ make(struct name *np, int level)
 			// Make prerequisite
 			estat |= make(dp->d_name, level + 1);
 
-			// Make a string listing prerequisites newer than target
-			// (but not if we were invoked with -q).
-			if (!quest && timespec_le(&np->n_tim, &dp->d_name->n_tim))
-				newer = xappendword(newer, dp->d_name->n_name);
+			// Make strings listing prerequisites newer than target and
+			// all prerequisites (but not if we were invoked with -q).
+			if (!quest) {
+				if (timespec_le(&np->n_tim, &dp->d_name->n_tim)) {
+					oodate = xappendword(oodate, dp->d_name->n_name);
+				}
+#if ENABLE_FEATURE_MAKE_EXTENSIONS
+				allsrc = xappendword(allsrc, dp->d_name->n_name);
+#endif
+			}
 			dtim = *timespec_max(&dtim, &dp->d_name->n_tim);
 		}
 #if ENABLE_FEATURE_MAKE_EXTENSIONS
 		if ((np->n_flag & N_DOUBLE)) {
 			if (!quest && timespec_le(&np->n_tim, &dtim)) {
 				if (estat == 0) {
-					estat = make1(np, rp->r_cmd, newer, locdep);
+					estat = make1(np, rp->r_cmd, oodate, allsrc, locdep);
 					dtim = (struct timespec){1, 0};
 					didsomething = 1;
 				}
-				free(newer);
-				newer = NULL;
+				free(oodate);
+				free(allsrc);
+				oodate = allsrc = NULL;
 			}
 			if (locdep) {
 				rp->r_dep = rp->r_dep->d_next;
@@ -281,13 +299,16 @@ make(struct name *np, int level)
 			if (!sc_cmd) {
 				warning("nothing to be done for %s", np->n_name);
 			} else {
-				estat = make1(np, sc_cmd, newer, impdep);
+				estat = make1(np, sc_cmd, oodate, allsrc, impdep);
 				clock_gettime(CLOCK_REALTIME, &np->n_tim);
 			}
 		} else {
 			warning("'%s' not built due to errors", np->n_name);
 		}
-		free(newer);
+		free(oodate);
+#if ENABLE_FEATURE_MAKE_EXTENSIONS
+		free(allsrc);
+#endif
 	} else if (level == 0 && !didsomething) {
 		printf("%s: '%s' is up to date\n", myname, np->n_name);
 	}
