@@ -246,6 +246,12 @@ expand_macros(const char *str)
 			// The internal macros support 'D' and 'F' modifiers
 			modifier = '\0';
 			switch (name[0]) {
+#if ENABLE_FEATURE_MAKE_EXTENSIONS
+			case '^':
+				if (posix)
+					break;
+				// fall through
+#endif
 			case '@': case '%': case '?': case '<': case '*':
 				if ((name[1] == 'D' || name[1] == 'F') && name[2] == '\0') {
 					modifier = name[1];
