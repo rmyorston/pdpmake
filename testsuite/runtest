@@ -20,6 +20,7 @@ if [ x"$1" = x"-v" ]; then
 fi
 
 # Test whether the binary has extensions enabled.
+unset PDPMAKE_POSIXLY_CORRECT
 if ../make -f - 2>/dev/null <<EOF
 VAR := value
 target:
