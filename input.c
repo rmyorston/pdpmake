@@ -117,7 +117,7 @@ modify_words(const char *val, int modifier, size_t lenf,
 			//
 			// find: <prefix>%<suffix>
 			// example: src/%.c
-			if (!posix && lenw >= lenf - 1 && find_pref) {
+			if (lenw >= lenf - 1 && find_pref) {
 				// If prefix and suffix of word match find_pref and
 				// find_suff, then do substitution.
 				if (strncmp(word, find_pref, find_pref_len) == 0 &&
@@ -214,7 +214,7 @@ expand_macros(const char *str)
 					*replace++ = '\0';
 					lenf = strlen(expfind);
 #if ENABLE_FEATURE_MAKE_EXTENSIONS
-					if ((find_suff = strchr(expfind, '%'))) {
+					if (!posix && (find_suff = strchr(expfind, '%'))) {
 						find_pref = expfind;
 						repl_pref = replace;
 						*find_suff++ = '\0';
