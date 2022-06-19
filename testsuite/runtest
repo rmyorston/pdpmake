@@ -19,17 +19,34 @@ if [ x"$1" = x"-v" ]; then
 	shift
 fi
 
-# Test whether the binary has extensions enabled.
+# Test whether the binary has non-POSIX extensions enabled.
 unset PDPMAKE_POSIXLY_CORRECT
+export OPTIONFLAGS=":"
 if ../make -f - 2>/dev/null <<EOF
 VAR := value
 target:
 	@:
 EOF
 then
-	export OPTIONFLAGS=:FEATURE_MAKE_EXTENSIONS:
-else
-	export OPTIONFLAGS=::
+	OPTIONFLAGS="${OPTIONFLAGS}FEATURE_MAKE_EXTENSIONS:"
+fi
+
+# Test whether the binary has POSIX 202X features enabled.
+XBX=$(../make -f - <<EOF
+a = b
+b = b
+target:
+	@echo x\$(\$a)x
+EOF
+)
+if [ "$XBX" = "xbx" ]
+then
+	OPTIONFLAGS="${OPTIONFLAGS}FEATURE_MAKE_POSIX_202X:"
+fi
+
+if [ "${OPTIONFLAGS}" = ":" ]
+then
+	OPTIONFLAGS="::"
 fi
 
 status=0

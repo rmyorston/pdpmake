@@ -57,7 +57,7 @@ skip_macro(const char *s)
 	return (char *)s;
 }
 
-#if !ENABLE_FEATURE_MAKE_EXTENSIONS
+#if !ENABLE_FEATURE_MAKE_POSIX_202X
 # define modify_words(v, m, l, fp, rp, fs, rs) modify_words(v, m, l, fs, rs)
 #endif
 /*
@@ -74,14 +74,14 @@ modify_words(const char *val, int modifier, size_t lenf,
 				const char *find_suff, const char *repl_suff)
 {
 	char *s, *copy, *word, *sep, *newword, *buf = NULL;
-#if ENABLE_FEATURE_MAKE_EXTENSIONS
+#if ENABLE_FEATURE_MAKE_POSIX_202X
 	size_t find_pref_len = 0, find_suff_len = 0;
 #endif
 
 	if (!modifier && !lenf)
 		return buf;
 
-#if ENABLE_FEATURE_MAKE_EXTENSIONS
+#if ENABLE_FEATURE_MAKE_POSIX_202X
 	if (find_pref) {
 		// get length of find prefix, e.g: src/
 		find_pref_len = strlen(find_pref);
@@ -111,7 +111,7 @@ modify_words(const char *val, int modifier, size_t lenf,
 		}
 		if (lenf) {
 			size_t lenw = strlen(word);
-#if ENABLE_FEATURE_MAKE_EXTENSIONS
+#if ENABLE_FEATURE_MAKE_POSIX_202X
 			// This code implements pattern macro expansions:
 			//    https://austingroupbugs.net/view.php?id=519
 			//
@@ -173,7 +173,7 @@ expand_macros(const char *str)
 	char *exp, *newexp, *s, *t, *p, *q, *name;
 	char *find, *replace, *modified;
 	char *expval, *expfind, *find_suff, *repl_suff;
-#if ENABLE_FEATURE_MAKE_EXTENSIONS
+#if ENABLE_FEATURE_MAKE_POSIX_202X
 	char *find_pref = NULL, *repl_pref = NULL;
 #endif
 	size_t lenf;
@@ -213,8 +213,8 @@ expand_macros(const char *str)
 				if ((replace = find_char(expfind, '='))) {
 					*replace++ = '\0';
 					lenf = strlen(expfind);
-#if ENABLE_FEATURE_MAKE_EXTENSIONS
-					if (!posix && (find_suff = strchr(expfind, '%'))) {
+#if ENABLE_FEATURE_MAKE_POSIX_202X
+					if (!POSIX_2017 && (find_suff = strchr(expfind, '%'))) {
 						find_pref = expfind;
 						repl_pref = replace;
 						*find_suff++ = '\0';
@@ -230,9 +230,9 @@ expand_macros(const char *str)
 			}
 
 			p = q = name;
-#if ENABLE_FEATURE_MAKE_EXTENSIONS
+#if ENABLE_FEATURE_MAKE_POSIX_202X
 			// If not in POSIX mode expand macros in the name.
-			if (!posix) {
+			if (!POSIX_2017) {
 				char *expname = expand_macros(name);
 				free(name);
 				name = expname;
@@ -246,9 +246,9 @@ expand_macros(const char *str)
 			// The internal macros support 'D' and 'F' modifiers
 			modifier = '\0';
 			switch (name[0]) {
-#if ENABLE_FEATURE_MAKE_EXTENSIONS
+#if ENABLE_FEATURE_MAKE_POSIX_202X
 			case '^':
-				if (posix)
+				if (POSIX_2017)
 					break;
 				// fall through
 #endif
@@ -717,14 +717,18 @@ input(FILE *fd)
 	bool semicolon_cmd, seen_inference;
 #if ENABLE_FEATURE_MAKE_EXTENSIONS
 	uint8_t old_clevel = clevel;
-	bool minus, dbl;
+	bool dbl;
 	char *lib = NULL;
 	glob_t gd;
 	int nfile, i;
 	char **files;
 #else
-	const bool minus = FALSE;
 	const bool dbl = FALSE;
+#endif
+#if ENABLE_FEATURE_MAKE_POSIX_202X
+	bool minus;
+#else
+	const bool minus = FALSE;
 #endif
 
 	lineno = 0;
@@ -745,8 +749,8 @@ input(FILE *fd)
 		str = process_line(str1);
 
 		// Check for an include line
-#if ENABLE_FEATURE_MAKE_EXTENSIONS
-		minus = !posix && *str == '-';
+#if ENABLE_FEATURE_MAKE_POSIX_202X
+		minus = !POSIX_2017 && *str == '-';
 #endif
 		p = str + minus;
 		if (strncmp(p, "include", 7) == 0 && isblank(p[7])) {

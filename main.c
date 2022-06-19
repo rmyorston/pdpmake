@@ -309,7 +309,7 @@ mark_special(const char *special, uint32_t oflag, uint8_t nflag)
 int
 main(int argc, char **argv)
 {
-#if ENABLE_FEATURE_MAKE_EXTENSIONS
+#if ENABLE_FEATURE_MAKE_POSIX_202X
 	const char *path, *newpath = NULL;
 #else
 	const char *path = "make";
@@ -336,8 +336,8 @@ main(int argc, char **argv)
 	}
 #endif
 
-#if ENABLE_FEATURE_MAKE_EXTENSIONS
-	if (!posix) {
+#if ENABLE_FEATURE_MAKE_POSIX_202X
+	if (!POSIX_2017) {
 		path = argv[0];
 		if (argv[0][0] != '/' && strchr(argv[0], '/')) {
 			// Make relative path absolute
@@ -397,7 +397,7 @@ main(int argc, char **argv)
 
 	setmacro("SHELL", "/bin/sh", 4);
 	setmacro("MAKE", path, 4);
-#if ENABLE_FEATURE_MAKE_EXTENSIONS
+#if ENABLE_FEATURE_MAKE_POSIX_202X
 	free((void *)newpath);
 #endif
 

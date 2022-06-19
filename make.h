@@ -38,6 +38,23 @@ extern char **environ;
 # define IF_NOT_FEATURE_MAKE_EXTENSIONS(...) __VA_ARGS__
 #endif
 
+// IF ENABLE_FEATURE_MAKE_POSIX_202X is non-zero POSIX 202X features
+// are enabled.
+//
+// If ENABLE_FEATURE_MAKE_POSIX_202X is set implicitly by inheriting
+// the value of ENABLE_FEATURE_MAKE_EXTENSIONS the POSIX mode enforced
+// by .POSIX, PDPMAKE_POSIXLY_CORRECT or --posix remains POSIX 2017.
+//
+// If ENABLE_FEATURE_MAKE_POSIX_202X is set explicitly the mode
+// enforced by runtime settings is POSIX 202X.
+#define POSIX_2017 posix
+#ifndef ENABLE_FEATURE_MAKE_POSIX_202X
+# define ENABLE_FEATURE_MAKE_POSIX_202X ENABLE_FEATURE_MAKE_EXTENSIONS
+#elif ENABLE_FEATURE_MAKE_POSIX_202X
+# undef POSIX_2017
+# define POSIX_2017 0
+#endif
+
 // If ENABLE_FEATURE_CLEAN_UP is non-zero all allocated structures are
 // freed at the end of main().  This isn't necessary but it's a nice test.
 #ifndef ENABLE_FEATURE_CLEAN_UP

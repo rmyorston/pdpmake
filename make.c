@@ -105,7 +105,7 @@ touch(struct name *np)
 	}
 }
 
-#if !ENABLE_FEATURE_MAKE_EXTENSIONS
+#if !ENABLE_FEATURE_MAKE_POSIX_202X
 # define make1(n, c, o, a, i) make1(n, c, o, i)
 #endif
 static int
@@ -117,8 +117,8 @@ make1(struct name *np, struct cmd *cp, char *oodate, char *allsrc,
 
 	name = splitlib(np->n_name, &member);
 	setmacro("?", oodate, 0);
-#if ENABLE_FEATURE_MAKE_EXTENSIONS
-	if (!posix)
+#if ENABLE_FEATURE_MAKE_POSIX_202X
+	if (!POSIX_2017)
 		setmacro("^", allsrc, 0);
 #endif
 	setmacro("%", member, 0);
@@ -177,7 +177,7 @@ make(struct name *np, int level)
 	struct rule imprule;
 	struct cmd *sc_cmd = NULL;	// commands for single-colon rule
 	char *oodate = NULL;
-#if ENABLE_FEATURE_MAKE_EXTENSIONS
+#if ENABLE_FEATURE_MAKE_POSIX_202X
 	char *allsrc = NULL;
 #endif
 	struct timespec dtim = {1, 0};
@@ -256,7 +256,7 @@ make(struct name *np, int level)
 				if (timespec_le(&np->n_tim, &dp->d_name->n_tim)) {
 					oodate = xappendword(oodate, dp->d_name->n_name);
 				}
-#if ENABLE_FEATURE_MAKE_EXTENSIONS
+#if ENABLE_FEATURE_MAKE_POSIX_202X
 				allsrc = xappendword(allsrc, dp->d_name->n_name);
 #endif
 			}
@@ -271,8 +271,11 @@ make(struct name *np, int level)
 					didsomething = 1;
 				}
 				free(oodate);
+#if ENABLE_FEATURE_MAKE_POSIX_202X
 				free(allsrc);
-				oodate = allsrc = NULL;
+				allsrc = NULL;
+#endif
+				oodate = NULL;
 			}
 			if (locdep) {
 				rp->r_dep = rp->r_dep->d_next;
@@ -306,7 +309,7 @@ make(struct name *np, int level)
 			warning("'%s' not built due to errors", np->n_name);
 		}
 		free(oodate);
-#if ENABLE_FEATURE_MAKE_EXTENSIONS
+#if ENABLE_FEATURE_MAKE_POSIX_202X
 		free(allsrc);
 #endif
 	} else if (level == 0 && !didsomething) {
