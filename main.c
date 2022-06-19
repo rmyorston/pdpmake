@@ -416,11 +416,14 @@ main(int argc, char **argv)
 	}
 
 	while (mp) {
-		if (strcmp(mp->c_cmd, "-") == 0)	// Can use stdin as makefile
+		if (strcmp(mp->c_cmd, "-") == 0) {	// Can use stdin as makefile
 			ifd = stdin;
-		else if ((ifd = fopen(mp->c_cmd, "r")) == NULL)
-			error("can't open %s: %s", mp->c_cmd, strerror(errno));
-		makefile = mp->c_cmd;
+			makefile = "stdin";
+		} else {
+			if ((ifd = fopen(mp->c_cmd, "r")) == NULL)
+				error("can't open %s: %s", mp->c_cmd, strerror(errno));
+			makefile = mp->c_cmd;
+		}
 		mp = mp->c_next;
  read_makefile:
 		input(ifd);
