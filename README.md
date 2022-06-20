@@ -6,9 +6,10 @@ It comes with its own makefile, naturally, and should build on most
 modernish Unix-style systems.  (Command line options may not work
 properly on BSD:  search for 'BSD' in main.c and adjust to suit.)
 
-In its default configuration only POSIX features are supported.  Some
-extensions can be enabled by setting `ENABLE_FEATURE_MAKE_EXTENSIONS`
-to 1.  These are largely compatible with GNU make:
+In its default configuration only POSIX.1-2017 features are supported.
+Some extensions can be enabled by setting `ENABLE_FEATURE_MAKE_EXTENSIONS`
+to 1.  These are largely compatible with GNU make and/or a future POSIX
+standard:
 
  - double-colon rules
  - `-include` to ignore missing include files
@@ -21,6 +22,7 @@ to 1.  These are largely compatible with GNU make:
  - `$(SRC:%.c=%.o)` pattern macro expansions
  - special handling of `MAKE` macro
  - `$^` internal macro
+ - skip duplicate entries in `$^` and `$?`
 
 When extensions are enabled adding the `.POSIX` target to your makefile
 will disable them.  Other versions of make tend to allow extensions even

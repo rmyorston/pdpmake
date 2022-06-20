@@ -115,7 +115,11 @@ struct name {
 	char *n_name;			// Called
 	struct rule *n_rule;	// Rules to build this (prerequisites/commands)
 	struct timespec n_tim;	// Modification time of this name
+#if !ENABLE_FEATURE_MAKE_EXTENSIONS
 	uint8_t n_flag;			// Info about the name
+#else
+	uint16_t n_flag;		// Info about the name
+#endif
 };
 
 #define N_DOING		0x01	// Name in process of being built
@@ -130,6 +134,9 @@ struct name {
 #define N_SILENT	0x20	// Build target silently
 #define N_IGNORE	0x40	// Ignore build errors
 #define N_SPECIAL	0x80	// Special target
+#if ENABLE_FEATURE_MAKE_EXTENSIONS
+#define N_MARK		0x100	// Mark for deduplication
+#endif
 
 // List of rules to build a target
 struct rule {

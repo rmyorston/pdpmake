@@ -228,6 +228,17 @@ make(struct name *np, int level)
 	}
 #endif
 
+#if ENABLE_FEATURE_MAKE_EXTENSIONS
+	// Reset flag to detect duplicate prerequisites
+	if (!quest && !(np->n_flag & N_DOUBLE)) {
+		for (rp = np->n_rule; rp; rp = rp->r_next) {
+			for (dp = rp->r_dep; dp; dp = dp->d_next) {
+				dp->d_name->n_flag &= ~N_MARK;
+			}
+		}
+	}
+#endif
+
 	for (rp = np->n_rule; rp; rp = rp->r_next) {
 #if ENABLE_FEATURE_MAKE_EXTENSIONS
 		struct name *locdep = NULL;
@@ -244,20 +255,35 @@ make(struct name *np, int level)
 			// A rule with no prerequisities is executed unconditionally.
 			if (!rp->r_dep)
 				dtim = np->n_tim;
+			// Reset flag to detect duplicate prerequisites
+			if (!quest) {
+				for (dp = rp->r_dep; dp; dp = dp->d_next) {
+					dp->d_name->n_flag &= ~N_MARK;
+				}
+			}
 		}
 #endif
 		for (dp = rp->r_dep; dp; dp = dp->d_next) {
 			// Make prerequisite
 			estat |= make(dp->d_name, level + 1);
 
-			// Make strings listing prerequisites newer than target and
-			// all prerequisites (but not if we were invoked with -q).
-			if (!quest) {
+			// Make strings of out-of-date prerequisites (for $?)
+			// and all prerequisites (for $^).  But not if we were
+			// invoked with -q.
+			if (!quest
+#if ENABLE_FEATURE_MAKE_EXTENSIONS
+					// Skip duplicate entries.
+					&& (posix || !(dp->d_name->n_flag & N_MARK))
+#endif
+			) {
 				if (timespec_le(&np->n_tim, &dp->d_name->n_tim)) {
 					oodate = xappendword(oodate, dp->d_name->n_name);
 				}
 #if ENABLE_FEATURE_MAKE_POSIX_202X
 				allsrc = xappendword(allsrc, dp->d_name->n_name);
+#endif
+#if ENABLE_FEATURE_MAKE_EXTENSIONS
+				dp->d_name->n_flag |= N_MARK;
 #endif
 			}
 			dtim = *timespec_max(&dtim, &dp->d_name->n_tim);
