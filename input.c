@@ -551,6 +551,9 @@ target_type(char *s)
 		".PRECIOUS",
 		".SILENT",
 		".SUFFIXES",
+#if ENABLE_FEATURE_MAKE_POSIX_202X
+		".PHONY",
+#endif
 	};
 
 	if (*s != '.')

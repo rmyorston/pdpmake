@@ -216,6 +216,10 @@ addrule(struct name *np, struct depend *dp, struct cmd *cp, int flag)
 
 	// Clear out prerequisites and commands
 	if ((np->n_flag & N_SPECIAL) && !dp && !cp) {
+#if ENABLE_FEATURE_MAKE_POSIX_202X
+		if (strcmp(np->n_name, ".PHONY") == 0)
+			return;
+#endif
 		freerules(np->n_rule);
 		np->n_rule = NULL;
 		return;

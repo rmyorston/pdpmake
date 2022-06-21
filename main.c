@@ -286,7 +286,7 @@ init_signal(int sig)
  * target had no prerequisites set the global option flag.
  */
 static void
-mark_special(const char *special, uint32_t oflag, uint8_t nflag)
+mark_special(const char *special, uint32_t oflag, uint16_t nflag)
 {
 	struct name *np;
 	struct rule *rp;
@@ -437,6 +437,10 @@ main(int argc, char **argv)
 	mark_special(".SILENT", OPT_s, N_SILENT);
 	mark_special(".IGNORE", OPT_i, N_IGNORE);
 	mark_special(".PRECIOUS", OPT_precious, N_PRECIOUS);
+#if ENABLE_FEATURE_MAKE_POSIX_202X
+	if (!POSIX_2017)
+		mark_special(".PHONY", OPT_phony, N_PHONY);
+#endif
 
 	estat = 0;
 	if (*argv == NULL) {

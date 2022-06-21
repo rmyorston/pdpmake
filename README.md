@@ -23,6 +23,7 @@ standard:
  - special handling of `MAKE` macro
  - `$^` internal macro
  - skip duplicate entries in `$^` and `$?`
+ - `.PHONY` special target
 
 When extensions are enabled adding the `.POSIX` target to your makefile
 will disable them.  Other versions of make tend to allow extensions even
