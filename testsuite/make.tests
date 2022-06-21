@@ -210,6 +210,29 @@ target: file1 file2
 	@echo $^
 '
 rm -f target file1 file2
+
+# Phony targets are executed (once) even if a matching file exists.
+# A .PHONY target with no prerequisites is ignored.
+touch -t 202206171201 target
+testing "Phony target" \
+	"make -f -" \
+	"phony\n" "" '
+.PHONY: target
+.PHONY:
+target:
+	@echo phony
+'
+rm -f target
+
+# Phony targets aren't touched with -t
+testing "Phony target not touched" \
+	"make -t -f - >/dev/null && test -f target && echo target" \
+	"" "" '
+.PHONY: target
+target:
+	@:
+'
+rm -f target
 SKIP=
 
 # =================================================================

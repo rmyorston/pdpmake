@@ -55,6 +55,14 @@ extern char **environ;
 # define POSIX_2017 0
 #endif
 
+#if ENABLE_FEATURE_MAKE_POSIX_202X
+# define IF_FEATURE_MAKE_POSIX_202X(...) __VA_ARGS__
+# define IF_NOT_FEATURE_MAKE_POSIX_202X(...)
+#else
+# define IF_FEATURE_MAKE_POSIX_202X(...)
+# define IF_NOT_FEATURE_MAKE_POSIX_202X(...) __VA_ARGS__
+#endif
+
 // If ENABLE_FEATURE_CLEAN_UP is non-zero all allocated structures are
 // freed at the end of main().  This isn't necessary but it's a nice test.
 #ifndef ENABLE_FEATURE_CLEAN_UP
@@ -77,6 +85,7 @@ enum {
 	OPTBIT_f,
 	IF_FEATURE_MAKE_EXTENSIONS(OPTBIT_C,)
 	OPTBIT_precious,
+	IF_FEATURE_MAKE_POSIX_202X(OPTBIT_phony,)
 
 	OPT_e = (1 << 0),
 	OPT_i = (1 << 1),
@@ -91,12 +100,13 @@ enum {
 	OPT_p = (1 << OPTBIT_p),
 	OPT_f = (1 << OPTBIT_f),
 	OPT_C = IF_FEATURE_MAKE_EXTENSIONS((1 << OPTBIT_C)) + 0,
-	// OPT_precious isn't a command line option and must be last
+	// The following aren't command line options and must be last
 	OPT_precious = (1 << OPTBIT_precious),
+	OPT_phony = IF_FEATURE_MAKE_POSIX_202X((1 << OPTBIT_phony)) + 0,
 };
 
 // Options that aren't included in MAKEFLAGS
-#define OPT_MASK  (~(OPT_C | OPT_f | OPT_p | OPT_S | OPT_precious))
+#define OPT_MASK  (~(OPT_C | OPT_f | OPT_p | OPT_S | OPT_precious | OPT_phony))
 
 #define useenv    (opts & OPT_e)
 #define ignore    (opts & OPT_i)
@@ -115,11 +125,7 @@ struct name {
 	char *n_name;			// Called
 	struct rule *n_rule;	// Rules to build this (prerequisites/commands)
 	struct timespec n_tim;	// Modification time of this name
-#if !ENABLE_FEATURE_MAKE_EXTENSIONS
-	uint8_t n_flag;			// Info about the name
-#else
 	uint16_t n_flag;		// Info about the name
-#endif
 };
 
 #define N_DOING		0x01	// Name in process of being built
@@ -136,6 +142,11 @@ struct name {
 #define N_SPECIAL	0x80	// Special target
 #if ENABLE_FEATURE_MAKE_EXTENSIONS
 #define N_MARK		0x100	// Mark for deduplication
+#endif
+#if ENABLE_FEATURE_MAKE_POSIX_202X
+#define N_PHONY		0x200	// Name is a phony target
+#else
+#define N_PHONY		0		// No support for phony targets
 #endif
 
 // List of rules to build a target

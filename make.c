@@ -9,7 +9,7 @@ void
 remove_target(void)
 {
 	if (!dryrun && !print && !precious &&
-			target && !(target->n_flag & N_PRECIOUS) &&
+			target && !(target->n_flag & (N_PRECIOUS | N_PHONY)) &&
 			unlink(target->n_name) == 0) {
 		warning("'%s' removed", target->n_name);
 	}
@@ -95,7 +95,7 @@ touch(struct name *np)
 		if (utimensat(AT_FDCWD, np->n_name, timebuf, 0) < 0) {
 			if (errno == ENOENT) {
 				int fd = open(np->n_name, O_RDWR | O_CREAT, 0666);
-				if (fd > 0) {
+				if (fd >= 0) {
 					close(fd);
 					return;
 				}
@@ -132,7 +132,7 @@ make1(struct name *np, struct cmd *cp, char *oodate, char *allsrc,
 	free(name);
 
 	estat = docmds(np, cp);
-	if (dotouch)
+	if (dotouch && !(np->n_flag & N_PHONY))
 		touch(np);
 
 	return estat;
@@ -323,7 +323,8 @@ make(struct name *np, int level)
 			clock_gettime(CLOCK_REALTIME, &np->n_tim);
 			return 1;	// 1 means rebuild is needed
 		}
-	} else if (timespec_le(&np->n_tim, &dtim) && !(np->n_flag & N_DOUBLE)) {
+	} else if ((np->n_flag & N_PHONY) ||
+			(timespec_le(&np->n_tim, &dtim) && !(np->n_flag & N_DOUBLE))) {
 		if (estat == 0) {
 			if (!sc_cmd) {
 				warning("nothing to be done for %s", np->n_name);
