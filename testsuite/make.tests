@@ -63,9 +63,19 @@ DOTC = .c
 DOTO = .o
 SRC1 = src1.c
 SRCS = $(SRC1) src2.c
-OBJS = $(SRCS:$(DOTC)=$(DOTO))
 target:
-	@echo $(OBJS)
+	@echo $(SRCS:$(DOTC)=$(DOTO))
+'
+
+# Indeed, everything after the <colon> can be obtained by macro
+# macro expansion.
+testing "Macro expansion and suffix substitution 2" \
+	"make -f -" "src1.o src2.o\n" "" '
+DOTS = .c=.o
+SRC1 = src1.c
+SRCS = $(SRC1) src2.c
+target:
+	@echo $(SRCS:$(DOTS))
 '
 
 # It should be possible for an inference rule to determine that a
@@ -122,8 +132,10 @@ target:
 '
 
 # pattern macro expansion with multiple <percent> in rvalue
+# POSIX requires the first <percent> to be expanded, others
+# may or may not be expanded.  Permit either case.
 testing "Pattern macro expansion with multiple <percent> in rvalue" \
-	"make -f -" \
+	"make -f - | sed 's/mainmainmain/main%%/'" \
 	"main%%\n" "" '
 SRC = main.c
 OBJ = $(SRC:%.c=%%%)
@@ -253,15 +265,18 @@ target::
 mkdir make.tempdir && cd make.tempdir || exit 1
 touch target.p
 testing "Chained inference rules" \
-	"make -f - target.s" \
-	"cp target.p target.q\ncp target.q target.r\ncp target.r target.s\n" "" '
+	"make -s -f - target.s" \
+	"target.q\ntarget.r\ntarget.s\n" "" '
 .SUFFIXES: .p .q .r .s
 .p.q:
-	cp $< $*.q
+	@cp $< $*.q
+	@echo $*.q
 .q.r:
-	cp $< $*.r
+	@cp $< $*.r
+	@echo $*.r
 .r.s:
-	cp $< $*.s
+	@cp $< $*.s
+	@echo $*.s
 '
 cd .. || exit 1; rm -rf make.tempdir 2>/dev/null
 
@@ -302,9 +317,10 @@ target:
 	@echo $(reset)
 '
 
+cd .. || exit 1; rm -rf make.tempdir 2>/dev/null
 # make supports *, ? and [] wildcards in targets and prerequisites
 mkdir make.tempdir && cd make.tempdir || exit 1
-touch t1a t2aa t3b
+touch -t 202206171201 t1a t2aa t3b
 touch s1a s2aa s3b
 testing "Expand wildcards in filenames" \
 	"make -f - t1a t2aa t3b" \
@@ -324,6 +340,7 @@ SKIP=
 optional FEATURE_MAKE_EXTENSIONS
 test "$SKIP" = "" && optional FEATURE_MAKE_POSIX_202X
 # Skip duplicate entries in $? and $^
+mkdir make.tempdir && cd make.tempdir || exit 1
 touch -t 202206171200 file1 file3
 touch -t 202206171201 target
 touch -t 202206171202 file2
@@ -334,10 +351,11 @@ target: file1 file2 file2 file3 file3
 	@echo $?
 	@echo $^
 '
-rm -f target file1 file2 file3
+cd .. || exit 1; rm -rf make.tempdir 2>/dev/null
 
 # Skip duplicate entries in $? and $^, with each double-colon rule
 # handled separately
+mkdir make.tempdir && cd make.tempdir || exit 1
 touch -t 202206171200 file1 file3
 touch -t 202206171201 target
 touch -t 202206171202 file2
@@ -351,5 +369,5 @@ target:: file2 file3 file3
 	@echo $?
 	@echo $^
 '
-rm -f target file1 file2 file3
+cd .. || exit 1; rm -rf make.tempdir 2>/dev/null
 SKIP=
