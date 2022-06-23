@@ -20,11 +20,13 @@ if [ x"$1" = x"-v" ]; then
 fi
 
 # Test whether the binary has non-POSIX extensions enabled.
+# Specifically, test whether double-colon rules are supported.
 unset PDPMAKE_POSIXLY_CORRECT
 export OPTIONFLAGS=":"
 if ../make -f - 2>/dev/null <<EOF
-VAR := value
-target:
+target::
+	@:
+target::
 	@:
 EOF
 then
@@ -32,14 +34,14 @@ then
 fi
 
 # Test whether the binary has POSIX 202X features enabled.
-XBX=$(../make -f - <<EOF
-a = b
-b = b
-target:
-	@echo x\$(\$a)x
+# Specifically, test whether pattern macro expansion is supported.
+OBJ=$(../make -f - 2>/dev/null <<EOF
+SRC = src/util.c
+tatget:
+	@echo \$(SRC:src/%.c=obj/%.o)
 EOF
 )
-if [ "$XBX" = "xbx" ]
+if [ "$OBJ" = "obj/util.o" ]
 then
 	OPTIONFLAGS="${OPTIONFLAGS}FEATURE_MAKE_POSIX_202X:"
 fi

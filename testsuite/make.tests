@@ -88,24 +88,6 @@ cd .. || exit 1; rm -rf make.tempdir 2>/dev/null
 # =================================================================
 
 optional FEATURE_MAKE_POSIX_202X
-# Nested macro expansion is allowed.  This should be compatible
-# with other implementations.
-testing "Nested macro expansion" \
-	"make -f -" "0 bc\n1 d\n2\n3\n4 bcd\n5 bcd\n" "" '
-a = b
-b = c
-c = d
-$(a:.q=.v)$(b:.z=.v) = bc
-bcd = bcd
-target:
-	@echo 0 $(bc)
-	@echo 1 $($($(a)))
-	@echo 2 $($(a) $(b) $(c))
-	@echo 3 $($a $b $c)
-	@echo 4 $($(a)$(b)$(c))
-	@echo 5 $($a$b$c)
-'
-
 # basic pattern macro expansion
 testing "Basic pattern macro expansion" \
 	"make -f -" \
@@ -241,6 +223,24 @@ SKIP=
 # =================================================================
 
 optional FEATURE_MAKE_EXTENSIONS
+# Nested macro expansion is allowed.  This should be compatible
+# with other implementations.
+testing "Nested macro expansion" \
+	"make -f -" "0 bc\n1 d\n2\n3\n4 bcd\n5 bcd\n" "" '
+a = b
+b = c
+c = d
+$(a:.q=.v)$(b:.z=.v) = bc
+bcd = bcd
+target:
+	@echo 0 $(bc)
+	@echo 1 $($($(a)))
+	@echo 2 $($(a) $(b) $(c))
+	@echo 3 $($a $b $c)
+	@echo 4 $($(a)$(b)$(c))
+	@echo 5 $($a$b$c)
+'
+
 testing "Double-colon rule" \
 	"make -f -" "target1\ntarget2\n" "" '
 target::
