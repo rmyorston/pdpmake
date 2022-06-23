@@ -2,6 +2,9 @@
  * Include header for make
  */
 #define _XOPEN_SOURCE 700
+#if defined(__sun__)
+# define __EXTENSIONS__
+#endif
 #include <stdlib.h>
 #include <string.h>
 #include <strings.h>
@@ -23,6 +26,21 @@
 extern char **environ;
 
 #define NORETURN __attribute__ ((__noreturn__))
+
+// Resetting getopt(3) is hopelessly platform-dependent.  If command
+// line options don't work as expected you may need to tweak this.
+// The default should work for GNU libc and OpenBSD.
+#if defined(__FreeBSD__) || defined(__NetBSD__)
+# define GETOPT_RESET() do { \
+	extern int optreset; \
+	optind = 1; \
+	optreset = 1; \
+} while (0)
+#elif defined(__sun__)
+# define GETOPT_RESET() (optind = 1)
+#else
+# define GETOPT_RESET() (optind = 0)
+#endif
 
 // If ENABLE_FEATURE_MAKE_EXTENSIONS is non-zero some non-POSIX extensions
 // are enabled.

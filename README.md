@@ -4,7 +4,8 @@ This is an implementation of [POSIX make](https://pubs.opengroup.org/onlinepubs/
 
 It comes with its own makefile, naturally, and should build on most
 modernish Unix-style systems.  (Command line options may not work
-properly on BSD:  search for 'BSD' in main.c and adjust to suit.)
+properly due to differences in how `getopt(3)` is reset.  Adjust
+`GETOPT_RESET()` in make.h to suit.)
 
 In its default configuration only POSIX.1-2017 features are supported.
 Some extensions can be enabled by setting `ENABLE_FEATURE_MAKE_EXTENSIONS`
