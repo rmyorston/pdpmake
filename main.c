@@ -1,5 +1,6 @@
 /*
- * make [--posix] [-C path] [-f makefile] [-eiknpqrsSt] [macro=val ...] [target ...]
+ * make [--posix] [-C path] [-f makefile] [-eiknpqrsSt]
+ *      [macro[::]=val ...] [target ...]
  *
  *  --posix  Enforce POSIX mode (non-POSIX)
  *  -C  Change directory to path (non-POSIX)
@@ -32,7 +33,9 @@ usage(void)
 	fprintf(stderr,
 		"Usage: %s"
 		IF_FEATURE_MAKE_EXTENSIONS(" [--posix] [-C path]")
-		" [-f makefile] [-eiknpqrsSt] [macro=val ...]"
+		" [-f makefile] [-eiknpqrsSt] "
+		IF_NOT_FEATURE_MAKE_POSIX_202X("[macro=val ...]")
+		IF_FEATURE_MAKE_POSIX_202X("[macro[::]=val ...]")
 		IF_FEATURE_MAKE_EXTENSIONS("\n\t")
 		" [target ...]\n", myname);
 	exit(2);
@@ -189,11 +192,32 @@ process_macros(char **argv, int level)
 	char *p;
 
 	while (*argv && (p = strchr(*argv, '=')) != NULL) {
+#if !ENABLE_FEATURE_MAKE_POSIX_202X
+		const int immediate = 0;
+#else
+		int immediate = 0;
+
+		if (p - 2 > *argv && p[-1] == ':' && p[-2] == ':') {
+			if (POSIX_2017)
+				error("invalid macro assignment");
+			immediate = M_IMMEDIATE;
+			p[-2] = '\0';
+		} else
+#endif
 		*p = '\0';
 		if (level != 3 || (strcmp(*argv, "MAKEFLAGS") != 0 &&
-				strcmp(*argv, "SHELL") != 0))
-			setmacro(*argv, p+1, level);
+					strcmp(*argv, "SHELL") != 0)) {
+			if (immediate) {
+				char *exp = expand_macros(p + 1, FALSE);
+				setmacro(*argv, exp, level | immediate);
+				free(exp);
+			} else {
+				setmacro(*argv, p + 1, level);
+			}
+		}
 		*p = '=';
+		if (immediate)
+			p[-2] = ':';
 
 		argv++;
 	}

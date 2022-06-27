@@ -98,6 +98,33 @@ cd .. || exit 1; rm -rf make.tempdir 2>/dev/null
 # =================================================================
 
 optional FEATURE_MAKE_POSIX_202X
+# A macro created using ::= remembers it's of type immediate-expansion.
+# Immediate expansion also occurs when += is used to append to such a macro.
+testing "Appending to immediate-expansion macro" \
+	"make -f -" \
+	"hello 1 2 3\nhello 4 4\n" "" '
+world = 1
+hello ::= hello $(world)
+world = 2
+hello += $(world)
+world = 3
+hello += $(world)
+world = 4
+
+world = 1
+reset ::= hello $(world)
+world = 2
+# No longer immediate-expansion
+reset = hello $(world)
+world = 3
+reset += $(world)
+world = 4
+
+target:
+	@echo $(hello)
+	@echo $(reset)
+'
+
 # basic pattern macro expansion
 testing "Basic pattern macro expansion" \
 	"make -f -" \
@@ -288,33 +315,6 @@ hello != echo 1; echo 2; echo 3; echo; echo
 
 target:
 	@echo "$(hello) 4"
-'
-
-# GNU make tracks whether a macro is simply- or recursively-expanded
-# and treats += differently as a result.
-testing "Appending to simply-expanded macro" \
-	"make -f -" \
-	"hello 1 2 3\nhello 4 4\n" "" '
-world = 1
-hello := hello $(world)
-world = 2
-hello += $(world)
-world = 3
-hello += $(world)
-world = 4
-
-world = 1
-reset := hello $(world)
-world = 2
-# No longer simply-expanded
-reset = hello $(world)
-world = 3
-reset += $(world)
-world = 4
-
-target:
-	@echo $(hello)
-	@echo $(reset)
 '
 
 cd .. || exit 1; rm -rf make.tempdir 2>/dev/null

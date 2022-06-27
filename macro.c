@@ -22,11 +22,11 @@ setmacro(const char *name, const char *val, int level)
 	struct macro *mp;
 	const char *s;
 #if ENABLE_FEATURE_MAKE_EXTENSIONS
-	bool simple = FALSE;
+	bool immediate = FALSE;
 
-	if ((level & M_SIMPLE)) {
-		simple = TRUE;
-		level &= ~M_SIMPLE;
+	if ((level & M_IMMEDIATE)) {
+		immediate = TRUE;
+		level &= ~M_IMMEDIATE;
 	}
 #endif
 	for (s = name; *s; ++s) {
@@ -53,7 +53,7 @@ setmacro(const char *name, const char *val, int level)
 		mp->m_name = xstrdup(name);
 	}
 #if ENABLE_FEATURE_MAKE_EXTENSIONS
-	mp->m_simple = simple;
+	mp->m_immediate = immediate;
 #endif
 	mp->m_level = level;
 	mp->m_val = xstrdup(val ? val : "");

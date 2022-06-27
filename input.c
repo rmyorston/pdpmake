@@ -788,17 +788,42 @@ input(FILE *fd)
 		q = find_char(str, '=');
 		if (q != NULL) {
 			int level = (useenv || fd == NULL) ? 4 : 3;
-#if ENABLE_FEATURE_MAKE_EXTENSIONS
+#if ENABLE_FEATURE_MAKE_EXTENSIONS || ENABLE_FEATURE_MAKE_POSIX_202X
 			char *newq = NULL;
-			char *rhs;
 			char eq = '\0';
 
-			// As an extension allow ':=', '+=', '?=' and '!='.
-			if (!posix && q != str &&
-					(q[-1] == ':' || q[-1] == '+' ||
-						q[-1] == '?' || q[-1] == '!')) {
-				eq = q[-1];
-				q[-1] = '\0';
+			if (q - 1 > str) {
+				switch (q[-1]) {
+				case ':':
+# if ENABLE_FEATURE_MAKE_POSIX_202X
+					// '::=' is from POSIX 202X.
+					if (!POSIX_2017 && q - 2 > str && q[-2] == ':') {
+						eq = ':';	// GNU-style ':='
+						q[-2] = '\0';
+						break;
+					}
+# endif
+# if ENABLE_FEATURE_MAKE_EXTENSIONS
+				case '!':
+					// ':=' and '!=' are non-POSIX extensions.
+					if (posix)
+						break;
+					IF_FEATURE_MAKE_POSIX_202X(goto set_eq;)
+# else
+					break;
+# endif
+# if ENABLE_FEATURE_MAKE_POSIX_202X
+				case '+':
+				case '?':
+					// '+=' and '?=' are from POSIX 202X.
+					if (POSIX_2017)
+						break;
+ IF_FEATURE_MAKE_EXTENSIONS(set_eq:)
+# endif
+					eq = q[-1];
+					q[-1] = '\0';
+					break;
+				}
 			}
 #endif
 			*q++ = '\0';	// Separate name and value
@@ -812,23 +837,26 @@ input(FILE *fd)
 			if ((a = gettok(&p)) == NULL || gettok(&p))
 				error("invalid macro assignment");
 
-#if ENABLE_FEATURE_MAKE_EXTENSIONS
-			if (eq == '?' && getmp(a) != NULL) {
-				// Skip assignment if macro is already set
-				goto end_loop;
-			} else if (eq == ':') {
+#if ENABLE_FEATURE_MAKE_EXTENSIONS || ENABLE_FEATURE_MAKE_POSIX_202X
+			if (eq == ':') {
 				// Expand right-hand side of assignment
 				q = newq = expand_macros(q);
-				level |= M_SIMPLE;
+				level |= M_IMMEDIATE;
+			}
+# if ENABLE_FEATURE_MAKE_POSIX_202X
+			else if (eq == '?' && getmp(a) != NULL) {
+				// Skip assignment if macro is already set
+				goto end_loop;
 			} else if (eq == '+') {
 				// Append to current value
 				struct macro *mp = getmp(a);
+				char *rhs;
 				newq = mp && mp->m_val[0] ? xstrdup(mp->m_val) : NULL;
-				if (mp && mp->m_simple) {
+				if (mp && mp->m_immediate) {
 					// Expand right-hand side of assignment (GNU make
 					// compatibility)
 					rhs = expand_macros(q);
-					level |= M_SIMPLE;
+					level |= M_IMMEDIATE;
 				} else {
 					rhs = q;
 				}
@@ -836,14 +864,18 @@ input(FILE *fd)
 				if (rhs != q)
 					free(rhs);
 				q = newq;
-			} else if (eq == '!') {
+			}
+# endif
+# if ENABLE_FEATURE_MAKE_EXTENSIONS
+			else if (eq == '!') {
 				char *cmd = expand_macros(q);
 				q = newq = run_command(cmd);
 				free(cmd);
 			}
+# endif
 #endif
 			setmacro(a, q, level);
-#if ENABLE_FEATURE_MAKE_EXTENSIONS
+#if ENABLE_FEATURE_MAKE_EXTENSIONS || ENABLE_FEATURE_MAKE_POSIX_202X
 			free(newq);
 #endif
 			goto end_loop;
