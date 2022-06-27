@@ -168,7 +168,7 @@ find_char(const char *str, int c)
  * Recursively expand any macros in str to an allocated string.
  */
 char *
-expand_macros(const char *str)
+expand_macros(const char *str, int except_dollar)
 {
 	char *exp, *newexp, *s, *t, *p, *q, *name;
 	char *find, *replace, *modified;
@@ -186,6 +186,12 @@ expand_macros(const char *str)
 			if (t[1] == '\0') {
 				break;
 			}
+#if ENABLE_FEATURE_MAKE_POSIX_202X
+			if (t[1] == '$' && except_dollar) {
+				t++;
+				continue;
+			}
+#endif
 			// Need to expand a macro.  Find its extent (s to t inclusive)
 			// and take a copy of its content.
 			s = t;
@@ -209,7 +215,7 @@ expand_macros(const char *str)
 			lenf = 0;
 			if ((find = find_char(name, ':'))) {
 				*find++ = '\0';
-				expfind = expand_macros(find);
+				expfind = expand_macros(find, FALSE);
 				if ((replace = find_char(expfind, '='))) {
 					*replace++ = '\0';
 					lenf = strlen(expfind);
@@ -233,7 +239,7 @@ expand_macros(const char *str)
 #if ENABLE_FEATURE_MAKE_EXTENSIONS
 			// If not in POSIX mode expand macros in the name.
 			if (!posix) {
-				char *expname = expand_macros(name);
+				char *expname = expand_macros(name, FALSE);
 				free(name);
 				name = expname;
 			} else
@@ -267,7 +273,7 @@ expand_macros(const char *str)
 					error("recursive macro %s", name);
 
 				mp->m_flag = TRUE;
-				expval = expand_macros(mp->m_val);
+				expval = expand_macros(mp->m_val, FALSE);
 				mp->m_flag = FALSE;
 				modified = modify_words(expval, modifier, lenf,
 								find_pref, repl_pref, find_suff, repl_suff);
@@ -416,7 +422,7 @@ skip_line(const char *str1)
 				}
 
 				if (!(cstate[clevel] & GOT_MATCH)) {
-					char *t = expand_macros(next_token);
+					char *t = expand_macros(next_token, FALSE);
 					struct macro *mp = getmp(t);
 					int match = mp != NULL && mp->m_val[0] != '\0';
 
@@ -763,7 +769,7 @@ input(FILE *fd)
 			if (ilevel > 16)
 				error("too many includes");
 
-			q = expanded = expand_macros(p + 7);
+			q = expanded = expand_macros(p + 7, FALSE);
 			while ((p = gettok(&q)) != NULL) {
 				FILE *ifd;
 
@@ -796,10 +802,15 @@ input(FILE *fd)
 				switch (q[-1]) {
 				case ':':
 # if ENABLE_FEATURE_MAKE_POSIX_202X
-					// '::=' is from POSIX 202X.
+					// '::=' and ':::=' are from POSIX 202X.
 					if (!POSIX_2017 && q - 2 > str && q[-2] == ':') {
-						eq = ':';	// GNU-style ':='
-						q[-2] = '\0';
+						if (q - 3 > str && q[-3] == ':') {
+							eq = 'B';	// BSD-style ':='
+							q[-3] = '\0';
+						} else {
+							eq = ':';	// GNU-style ':='
+							q[-2] = '\0';
+						}
 						break;
 					}
 # endif
@@ -833,18 +844,23 @@ input(FILE *fd)
 				*p = '\0';
 
 			// Expand left-hand side of assignment
-			p = expanded = expand_macros(str);
+			p = expanded = expand_macros(str, FALSE);
 			if ((a = gettok(&p)) == NULL || gettok(&p))
 				error("invalid macro assignment");
 
 #if ENABLE_FEATURE_MAKE_EXTENSIONS || ENABLE_FEATURE_MAKE_POSIX_202X
 			if (eq == ':') {
-				// Expand right-hand side of assignment
-				q = newq = expand_macros(q);
+				// GNU-style ':='.  Expand right-hand side of assignment.
+				// Macro is of type immediate-expansion.
+				q = newq = expand_macros(q, FALSE);
 				level |= M_IMMEDIATE;
 			}
 # if ENABLE_FEATURE_MAKE_POSIX_202X
-			else if (eq == '?' && getmp(a) != NULL) {
+			else if (eq == 'B') {
+				// BSD-style ':='.  Expand right-hand side of assignment,
+				// though not '$$'.  Macro is of type delayed-expansion.
+				q = newq = expand_macros(q, TRUE);
+			} else if (eq == '?' && getmp(a) != NULL) {
 				// Skip assignment if macro is already set
 				goto end_loop;
 			} else if (eq == '+') {
@@ -855,7 +871,7 @@ input(FILE *fd)
 				if (mp && mp->m_immediate) {
 					// Expand right-hand side of assignment (GNU make
 					// compatibility)
-					rhs = expand_macros(q);
+					rhs = expand_macros(q, FALSE);
 					level |= M_IMMEDIATE;
 				} else {
 					rhs = q;
@@ -868,7 +884,7 @@ input(FILE *fd)
 # endif
 # if ENABLE_FEATURE_MAKE_EXTENSIONS
 			else if (eq == '!') {
-				char *cmd = expand_macros(q);
+				char *cmd = expand_macros(q, FALSE);
 				q = newq = run_command(cmd);
 				free(cmd);
 			}
@@ -882,7 +898,7 @@ input(FILE *fd)
 		}
 
 		// If we get here it must be a target rule
-		p = expanded = expand_macros(str);
+		p = expanded = expand_macros(str, FALSE);
 
 		// Look for colon separator
 		q = find_char(p, ':');

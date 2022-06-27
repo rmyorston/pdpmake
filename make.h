@@ -224,7 +224,10 @@ extern bool first_line;
 #endif
 
 void print_details(void);
-char *expand_macros(const char *str);
+#if !ENABLE_FEATURE_MAKE_POSIX_202X
+#define expand_macros(s, e) expand_macros(s)
+#endif
+char *expand_macros(const char *str, int except_dollar);
 void input(FILE *fd);
 struct macro *getmp(const char *name);
 void setmacro(const char *name, const char *val, int level);

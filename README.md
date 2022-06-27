@@ -16,7 +16,7 @@ standard:
  - `-include` to ignore missing include files
  - `ifdef`/`ifndef`/`else`/`endif` conditionals
  - `lib.a(mem1.o mem2.o...)` syntax for archive members
- - `:=`/`::=`/`+=`/`?=`/`!=` macro assignments
+ - `:=`/`::=`/`:::=`/`+=`/`?=`/`!=` macro assignments
  - macro expansions can be nested
  - chained inference rules
  - `*`/`?`/`[]` wildcards for filenames in target rules
