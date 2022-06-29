@@ -104,6 +104,7 @@ enum {
 	IF_FEATURE_MAKE_EXTENSIONS(OPTBIT_C,)
 	OPTBIT_precious,
 	IF_FEATURE_MAKE_POSIX_202X(OPTBIT_phony,)
+	IF_FEATURE_MAKE_POSIX_202X(OPTBIT_include,)
 
 	OPT_e = (1 << 0),
 	OPT_i = (1 << 1),
@@ -121,10 +122,11 @@ enum {
 	// The following aren't command line options and must be last
 	OPT_precious = (1 << OPTBIT_precious),
 	OPT_phony = IF_FEATURE_MAKE_POSIX_202X((1 << OPTBIT_phony)) + 0,
+	OPT_include = IF_FEATURE_MAKE_POSIX_202X((1 << OPTBIT_include)) + 0,
 };
 
 // Options that aren't included in MAKEFLAGS
-#define OPT_MASK  (~(OPT_C | OPT_f | OPT_p | OPT_S | OPT_precious | OPT_phony))
+#define OPT_MASK  (~(OPT_C | OPT_f | OPT_p | OPT_S | OPT_precious | OPT_phony | OPT_include))
 
 #define useenv    (opts & OPT_e)
 #define ignore    (opts & OPT_i)
@@ -136,6 +138,7 @@ enum {
 #define silent    (opts & OPT_s)
 #define dotouch   (opts & OPT_t)
 #define precious  (opts & OPT_precious)
+#define doinclude (opts & OPT_include)
 
 // A name.  This represents a file, either to be made, or pre-existing.
 struct name {

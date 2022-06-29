@@ -773,6 +773,14 @@ input(FILE *fd)
 			while ((p = gettok(&q)) != NULL) {
 				FILE *ifd;
 
+#if ENABLE_FEATURE_MAKE_POSIX_202X
+				if (!POSIX_2017) {
+					// Try to create include file or bring it up-to-date
+					opts |= OPT_include;
+					make(newname(p), 0);
+					opts &= ~OPT_include;
+				}
+#endif
 				if ((ifd = fopen(p, "r")) == NULL) {
 					if (!minus)
 						error("can't open include file '%s'", p);

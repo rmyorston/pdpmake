@@ -254,6 +254,45 @@ target:
 	@:
 '
 rm -f target
+
+# Include files are created or brought up-to-date
+mkdir make.tempdir && cd make.tempdir || exit 1
+testing "Create include file" \
+	"make -f -" \
+	"made\n" "" '
+target:
+	@echo $(VAR)
+mk:
+	@echo "VAR = made" >mk
+include mk
+'
+cd .. || exit 1; rm -rf make.tempdir 2>/dev/null
+
+# Include files are created or brought up-to-date even when the -n
+# option is given.
+mkdir make.tempdir && cd make.tempdir || exit 1
+testing "Create include file even with -n" \
+	"make -n -f -" \
+	"echo made\n" "" '
+target:
+	@echo $(VAR)
+mk:
+	@echo "VAR = made" >mk
+include mk
+'
+cd .. || exit 1; rm -rf make.tempdir 2>/dev/null
+
+# Failure to create an include file isn't an error.  (Provided the
+# include line is ignoring non-existent files.)
+testing "Failure to create include file is OK" \
+	"make -f -" \
+	"OK\n" "" '
+target:
+	@echo OK
+mk:
+	@:
+-include mk
+'
 SKIP=
 
 # =================================================================

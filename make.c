@@ -30,7 +30,7 @@ docmds(struct name *np, struct cmd *cp)
 		q = command = expand_macros(cp->c_cmd, FALSE);
 		ssilent = silent || (np->n_flag & N_SILENT) || dotouch;
 		signore = ignore || (np->n_flag & N_IGNORE);
-		sdomake = !dryrun && !dotouch;
+		sdomake = (!dryrun || doinclude) && !dotouch;
 		for (;;) {
 			if (*q == '@')	// Specific silent
 				ssilent = TRUE + 1;
@@ -61,13 +61,17 @@ docmds(struct name *np, struct cmd *cp)
 			target = np;
 			status = system(cmd);
 			target = NULL;
-			if (status == -1) {
+			// If this command was being run to create an include file
+			// or bring it up-to-date errors should be ignored and a
+			// failure status returned.
+			if (status == -1 && !doinclude) {
 				error("couldn't execute '%s'", q);
 			} else if (status != 0 && !signore) {
-				warning("failed to build '%s'", np->n_name);
+				if (!doinclude)
+					warning("failed to build '%s'", np->n_name);
 				if (status == SIGINT || status == SIGQUIT)
 					remove_target();
-				if (errcont)
+				if (errcont || doinclude)
 					estat = 1;	// 1 exit status is failure
 				else
 					exit(status);
