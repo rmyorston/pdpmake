@@ -398,10 +398,28 @@ mkdir make.tempdir && cd make.tempdir || exit 1
 touch -t 202206171200 file1 file3
 touch -t 202206171201 target
 touch -t 202206171202 file2
-testing "Skip duplicate entries:  double-colon rules" \
+testing "Skip duplicate entries: double-colon rules" \
 	"make -f -" \
 	"file2\nfile1 file3 file2\nfile2\nfile2 file3\n" "" '
 target:: file1 file3 file1 file2 file3
+	@echo $?
+	@echo $^
+target:: file2 file3 file3
+	@echo $?
+	@echo $^
+'
+cd .. || exit 1; rm -rf make.tempdir 2>/dev/null
+
+# Skip duplicate entries in $? and $^, with each double-colon rule
+# handled separately.  No prerequisites out-of-date in the first.
+mkdir make.tempdir && cd make.tempdir || exit 1
+touch -t 202206171200 file1 file3
+touch -t 202206171201 target
+touch -t 202206171202 file2
+testing "Skip duplicate entries: double-colon rules, only second needed" \
+	"make -f -" \
+	"file2\nfile2 file3\n" "" '
+target:: file1 file3 file1 file3
 	@echo $?
 	@echo $^
 target:: file2 file3 file3

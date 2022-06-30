@@ -301,12 +301,12 @@ make(struct name *np, int level)
 					didsomething = 1;
 				}
 				free(oodate);
-#if ENABLE_FEATURE_MAKE_POSIX_202X
-				free(allsrc);
-				allsrc = NULL;
-#endif
 				oodate = NULL;
 			}
+#if ENABLE_FEATURE_MAKE_POSIX_202X && 1
+			free(allsrc);
+			allsrc = NULL;
+#endif
 			if (locdep) {
 				rp->r_dep = rp->r_dep->d_next;
 				rp->r_cmd = NULL;
@@ -340,11 +340,11 @@ make(struct name *np, int level)
 			warning("'%s' not built due to errors", np->n_name);
 		}
 		free(oodate);
-#if ENABLE_FEATURE_MAKE_POSIX_202X
-		free(allsrc);
-#endif
 	} else if (level == 0 && !didsomething) {
 		printf("%s: '%s' is up to date\n", myname, np->n_name);
 	}
+#if ENABLE_FEATURE_MAKE_POSIX_202X
+	free(allsrc);
+#endif
 	return estat;
 }
