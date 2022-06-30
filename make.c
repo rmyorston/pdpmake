@@ -303,7 +303,7 @@ make(struct name *np, int level)
 				free(oodate);
 				oodate = NULL;
 			}
-#if ENABLE_FEATURE_MAKE_POSIX_202X && 1
+#if ENABLE_FEATURE_MAKE_POSIX_202X
 			free(allsrc);
 			allsrc = NULL;
 #endif
@@ -340,7 +340,9 @@ make(struct name *np, int level)
 			warning("'%s' not built due to errors", np->n_name);
 		}
 		free(oodate);
-	} else if (level == 0 && !didsomething) {
+	} else if (didsomething) {
+		clock_gettime(CLOCK_REALTIME, &np->n_tim);
+	} else if (level == 0) {
 		printf("%s: '%s' is up to date\n", myname, np->n_name);
 	}
 #if ENABLE_FEATURE_MAKE_POSIX_202X

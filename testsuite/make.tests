@@ -327,6 +327,26 @@ target::
 	@echo target2
 '
 
+# There was a bug whereby the modification time of a file created by
+# double-colon rules wasn't correctly updated.  This test checks that
+# the bug is now fixed.
+mkdir make.tempdir && cd make.tempdir || exit 1
+touch -t 202206171200 file1
+touch -t 202206171201 intermediate
+touch -t 202206171202 target
+touch -t 202206171203 file2
+testing "Target depends on prerequisite updated by double-colon rule" \
+	"make -f -" \
+	"file2\n" "" '
+target: intermediate
+	@cat intermediate
+intermediate:: file1
+	@echo file1 >>intermediate
+intermediate:: file2
+	@echo file2 >>intermediate
+'
+cd .. || exit 1; rm -rf make.tempdir 2>/dev/null
+
 # Use chained inference rules to determine prerequisites.
 mkdir make.tempdir && cd make.tempdir || exit 1
 touch target.p
@@ -416,7 +436,7 @@ mkdir make.tempdir && cd make.tempdir || exit 1
 touch -t 202206171200 file1 file3
 touch -t 202206171201 target
 touch -t 202206171202 file2
-testing "Skip duplicate entries: double-colon rules, only second needed" \
+testing "Skip duplicate entries: double-colon rules, only second invoked" \
 	"make -f -" \
 	"file2\nfile2 file3\n" "" '
 target:: file1 file3 file1 file3
