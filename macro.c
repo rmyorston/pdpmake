@@ -21,7 +21,7 @@ setmacro(const char *name, const char *val, int level)
 {
 	struct macro *mp;
 	const char *s;
-#if ENABLE_FEATURE_MAKE_EXTENSIONS
+#if ENABLE_FEATURE_MAKE_EXTENSIONS || ENABLE_FEATURE_MAKE_POSIX_202X
 	bool immediate = FALSE;
 
 	if ((level & M_IMMEDIATE)) {
@@ -52,7 +52,7 @@ setmacro(const char *name, const char *val, int level)
 		mp->m_flag = FALSE;
 		mp->m_name = xstrdup(name);
 	}
-#if ENABLE_FEATURE_MAKE_EXTENSIONS
+#if ENABLE_FEATURE_MAKE_EXTENSIONS || ENABLE_FEATURE_MAKE_POSIX_202X
 	mp->m_immediate = immediate;
 #endif
 	mp->m_level = level;
