@@ -447,4 +447,23 @@ target:: file2 file3 file3
 	@echo $^
 '
 cd .. || exit 1; rm -rf make.tempdir 2>/dev/null
+
+# Double-colon rules didn't work properly if their target was phony:
+# - they didn't ignore the presence of a file matching the target name;
+# - they were also invoked as if they were a single-colon rule.
+mkdir make.tempdir && cd make.tempdir || exit 1
+touch -t 202206171200 file1
+touch -t 202206171201 target
+testing "Phony target of double-colon rule" \
+	"make -f - 2>&1" \
+	"unconditional\nconditional\n" "" '
+.PHONY: target
+target::
+	@echo unconditional
+target:: file1
+	@echo conditional
+file1:
+	@touch file1
+'
+cd .. || exit 1; rm -rf make.tempdir 2>/dev/null
 SKIP=

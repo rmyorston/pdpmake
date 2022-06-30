@@ -294,7 +294,8 @@ make(struct name *np, int level)
 		}
 #if ENABLE_FEATURE_MAKE_EXTENSIONS
 		if ((np->n_flag & N_DOUBLE)) {
-			if (!quest && timespec_le(&np->n_tim, &dtim)) {
+			if (!quest && ((np->n_flag & N_PHONY) ||
+							timespec_le(&np->n_tim, &dtim))) {
 				if (estat == 0) {
 					estat = make1(np, rp->r_cmd, oodate, allsrc, locdep);
 					dtim = (struct timespec){1, 0};
@@ -327,8 +328,8 @@ make(struct name *np, int level)
 			clock_gettime(CLOCK_REALTIME, &np->n_tim);
 			return 1;	// 1 means rebuild is needed
 		}
-	} else if ((np->n_flag & N_PHONY) ||
-			(timespec_le(&np->n_tim, &dtim) && !(np->n_flag & N_DOUBLE))) {
+	} else if (!(np->n_flag & N_DOUBLE) &&
+				((np->n_flag & N_PHONY) || (timespec_le(&np->n_tim, &dtim)))) {
 		if (estat == 0) {
 			if (!sc_cmd) {
 				warning("nothing to be done for %s", np->n_name);
