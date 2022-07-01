@@ -212,8 +212,11 @@ make(struct name *np, int level)
 		// As a last resort check for a default rule
 		if (!(np->n_flag & N_TARGET) && np->n_tim.tv_sec == 0) {
 			sc_cmd = getcmd(findname(".DEFAULT"));
-			if (!sc_cmd)
+			if (!sc_cmd) {
+				if (doinclude)
+					return 1;
 				error("don't know how to make %s", np->n_name);
+			}
 			impdep = np;
 		}
 	}
@@ -224,8 +227,11 @@ make(struct name *np, int level)
 		for (rp = np->n_rule; rp; rp = rp->r_next) {
 			if (!rp->r_cmd) {
 				impdep = dyndep(np, &imprule);
-				if (!impdep)
+				if (!impdep) {
+					if (doinclude)
+						return 1;
 					error("don't know how to make %s", np->n_name);
+				}
 				break;
 			}
 		}
@@ -332,12 +338,13 @@ make(struct name *np, int level)
 				((np->n_flag & N_PHONY) || (timespec_le(&np->n_tim, &dtim)))) {
 		if (estat == 0) {
 			if (!sc_cmd) {
-				warning("nothing to be done for %s", np->n_name);
+				if (!doinclude)
+					warning("nothing to be done for %s", np->n_name);
 			} else {
 				estat = make1(np, sc_cmd, oodate, allsrc, impdep);
 				clock_gettime(CLOCK_REALTIME, &np->n_tim);
 			}
-		} else {
+		} else if (!doinclude) {
 			warning("'%s' not built due to errors", np->n_name);
 		}
 		free(oodate);

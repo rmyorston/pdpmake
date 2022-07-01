@@ -777,7 +777,7 @@ input(FILE *fd)
 				if (!POSIX_2017) {
 					// Try to create include file or bring it up-to-date
 					opts |= OPT_include;
-					make(newname(p), 0);
+					make(newname(p), 1);
 					opts &= ~OPT_include;
 				}
 #endif
