@@ -271,7 +271,11 @@ expand_macros(const char *str, int except_dollar)
 				// Recursive expansion
 				if (mp->m_flag)
 					error("recursive macro %s", name);
-
+#if ENABLE_FEATURE_MAKE_POSIX_202X
+				// Note if we've expanded $(MAKE)
+				if (strcmp(name, "MAKE") == 0)
+					opts |= OPT_make;
+#endif
 				mp->m_flag = TRUE;
 				expval = expand_macros(mp->m_val, FALSE);
 				mp->m_flag = FALSE;

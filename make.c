@@ -27,10 +27,13 @@ docmds(struct name *np, struct cmd *cp)
 	for (; cp; cp = cp->c_next) {
 		uint8_t ssilent, signore, sdomake;
 
+#if ENABLE_FEATURE_MAKE_POSIX_202X
+		opts &= ~OPT_make;	// We want to know if $(MAKE) is expanded
+#endif
 		q = command = expand_macros(cp->c_cmd, FALSE);
 		ssilent = silent || (np->n_flag & N_SILENT) || dotouch;
 		signore = ignore || (np->n_flag & N_IGNORE);
-		sdomake = (!dryrun || doinclude) && !dotouch;
+		sdomake = (!dryrun || doinclude || domake) && !dotouch;
 		for (;;) {
 			if (*q == '@')	// Specific silent
 				ssilent = TRUE + 1;

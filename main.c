@@ -1,10 +1,11 @@
 /*
- * make [--posix] [-C path] [-f makefile] [-eiknpqrsSt]
+ * make [--posix] [-C path] [-f makefile] [-j num] [-eiknpqrsSt]
  *      [macro[::]=val ...] [target ...]
  *
  *  --posix  Enforce POSIX mode (non-POSIX)
  *  -C  Change directory to path (non-POSIX)
  *  -f  Makefile name
+ *  -j  Number of jobs to run in parallel (not implemented)
  *  -e  Environment variables override macros in makefiles
  *  -i  Ignore exit status
  *  -k  Continue on error
@@ -26,6 +27,9 @@ struct cmd *makefiles;
 bool posix = FALSE;
 bool first_line;
 #endif
+#if ENABLE_FEATURE_MAKE_POSIX_202X
+char *numjobs = NULL;
+#endif
 
 static void
 usage(void)
@@ -33,17 +37,19 @@ usage(void)
 	fprintf(stderr,
 		"Usage: %s"
 		IF_FEATURE_MAKE_EXTENSIONS(" [--posix] [-C path]")
-		" [-f makefile] [-eiknpqrsSt] "
+		" [-f makefile]"
+		IF_FEATURE_MAKE_POSIX_202X(" [-j num]")
+		" [-eiknpqrsSt] "
+		IF_FEATURE_MAKE_EXTENSIONS("\n\t")
 		IF_NOT_FEATURE_MAKE_POSIX_202X("[macro=val ...]")
 		IF_FEATURE_MAKE_POSIX_202X("[macro[::]=val ...]")
-		IF_FEATURE_MAKE_EXTENSIONS("\n\t")
 		" [target ...]\n", myname);
 	exit(2);
 }
 
 /*
  * Process options from an argv array.  If from_env is non-zero we're
- * handling options from MAKEFLAGS so skip '-f' and '-p'.
+ * handling options from MAKEFLAGS so skip '-C', '-f' and '-p'.
  */
 static uint32_t
 process_options(int argc, char **argv, int from_env)
@@ -77,6 +83,24 @@ process_options(int argc, char **argv, int from_env)
 		case 'i':	// Ignore fault mode
 			flags |= OPT_i;
 			break;
+#if ENABLE_FEATURE_MAKE_POSIX_202X
+		case 'j':
+			if (!POSIX_2017) {
+				const char *s;
+
+				for (s = optarg; *s; ++s) {
+					if (!isdigit(*s)) {
+						usage();
+					}
+				}
+				free(numjobs);
+				numjobs = xstrdup(optarg);
+				flags |= OPT_j;
+				break;
+			}
+			error("-j not allowed");
+			break;
+#endif
 		case 'k':	// Continue on error
 			flags |= OPT_k;
 			flags &= ~OPT_S;
@@ -235,21 +259,29 @@ static void
 update_makeflags(void)
 {
 	int i;
-	char optbuf[sizeof(OPTSTR1) + 1];
+	char optbuf[] = "-?";
 	char *makeflags = NULL;
-	char *macro, *s, *t;
+	char *macro, *s;
+	const char *t;
 	struct macro *mp;
 
-	s = optbuf;
-	*s++ = '-';
-	for (i = 0; i < sizeof(OPTSTR1) - 1; i++) {
-		if ((opts & OPT_MASK & (1 << i)))
-			*s++ = OPTSTR1[i];
+	t = OPTSTR1;
+	for (i = 0; *t; t++) {
+#if ENABLE_FEATURE_MAKE_POSIX_202X
+		if (*t == ':')
+			continue;
+#endif
+		if ((opts & OPT_MASK & (1 << i))) {
+			optbuf[1] = *t;
+			makeflags = xappendword(makeflags, optbuf);
+#if ENABLE_FEATURE_MAKE_POSIX_202X
+			if (*t == 'j') {
+				makeflags = xappendword(makeflags, numjobs);
+			}
+#endif
+		}
+		i++;
 	}
-	*s = '\0';
-
-	if (optbuf[1])
-		makeflags = xstrdup(optbuf);
 
 	for (i = 0; i < HTABSIZE; ++i) {
 		for (mp = macrohead[i]; mp; mp = mp->m_next) {
@@ -469,6 +501,9 @@ main(int argc, char **argv)
 			estat |= make(newname(*argv++), 0);
 	}
 
+#if ENABLE_FEATURE_MAKE_POSIX_202X
+	free((void *)numjobs);
+#endif
 #if ENABLE_FEATURE_CLEAN_UP
 	freenames();
 	freemacros();

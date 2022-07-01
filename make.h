@@ -91,7 +91,11 @@ extern char **environ;
 #define FALSE		(0)
 #define MAX(a,b)	((a)>(b)?(a):(b))
 
+#if ENABLE_FEATURE_MAKE_POSIX_202X
+#define OPTSTR1 "eij:knqrsSt"
+#else
 #define OPTSTR1 "eiknqrsSt"
+#endif
 #if ENABLE_FEATURE_MAKE_EXTENSIONS
 #define OPTSTR2 "pf:C:"
 #else
@@ -99,22 +103,34 @@ extern char **environ;
 #endif
 
 enum {
-	OPTBIT_p = 9,
+	OPTBIT_e = 0,
+	OPTBIT_i,
+	IF_FEATURE_MAKE_POSIX_202X(OPTBIT_j,)
+	OPTBIT_k,
+	OPTBIT_n,
+	OPTBIT_q,
+	OPTBIT_r,
+	OPTBIT_s,
+	OPTBIT_S,
+	OPTBIT_t,
+	OPTBIT_p,
 	OPTBIT_f,
 	IF_FEATURE_MAKE_EXTENSIONS(OPTBIT_C,)
 	OPTBIT_precious,
 	IF_FEATURE_MAKE_POSIX_202X(OPTBIT_phony,)
 	IF_FEATURE_MAKE_POSIX_202X(OPTBIT_include,)
+	IF_FEATURE_MAKE_POSIX_202X(OPTBIT_make,)
 
-	OPT_e = (1 << 0),
-	OPT_i = (1 << 1),
-	OPT_k = (1 << 2),
-	OPT_n = (1 << 3),
-	OPT_q = (1 << 4),
-	OPT_r = (1 << 5),
-	OPT_s = (1 << 6),
-	OPT_S = (1 << 7),
-	OPT_t = (1 << 8),
+	OPT_e = (1 << OPTBIT_e),
+	OPT_i = (1 << OPTBIT_i),
+	OPT_j = IF_FEATURE_MAKE_POSIX_202X((1 << OPTBIT_j)) + 0,
+	OPT_k = (1 << OPTBIT_k),
+	OPT_n = (1 << OPTBIT_n),
+	OPT_q = (1 << OPTBIT_q),
+	OPT_r = (1 << OPTBIT_r),
+	OPT_s = (1 << OPTBIT_s),
+	OPT_S = (1 << OPTBIT_S),
+	OPT_t = (1 << OPTBIT_t),
 	// These options aren't allowed in MAKEFLAGS
 	OPT_p = (1 << OPTBIT_p),
 	OPT_f = (1 << OPTBIT_f),
@@ -123,10 +139,11 @@ enum {
 	OPT_precious = (1 << OPTBIT_precious),
 	OPT_phony = IF_FEATURE_MAKE_POSIX_202X((1 << OPTBIT_phony)) + 0,
 	OPT_include = IF_FEATURE_MAKE_POSIX_202X((1 << OPTBIT_include)) + 0,
+	OPT_make = IF_FEATURE_MAKE_POSIX_202X((1 << OPTBIT_make)) + 0,
 };
 
-// Options that aren't included in MAKEFLAGS
-#define OPT_MASK  (~(OPT_C | OPT_f | OPT_p | OPT_S | OPT_precious | OPT_phony | OPT_include))
+// Options in OPTSTR1 that aren't included in MAKEFLAGS
+#define OPT_MASK  (~OPT_S)
 
 #define useenv    (opts & OPT_e)
 #define ignore    (opts & OPT_i)
@@ -139,6 +156,7 @@ enum {
 #define dotouch   (opts & OPT_t)
 #define precious  (opts & OPT_precious)
 #define doinclude (opts & OPT_include)
+#define domake    (opts & OPT_make)
 
 // A name.  This represents a file, either to be made, or pre-existing.
 struct name {
@@ -224,6 +242,9 @@ extern int dispno;
 #if ENABLE_FEATURE_MAKE_EXTENSIONS
 extern bool posix;
 extern bool first_line;
+#endif
+#if ENABLE_FEATURE_MAKE_POSIX_202X
+extern char *numjobs;
 #endif
 
 void print_details(void);
