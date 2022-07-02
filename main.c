@@ -501,10 +501,10 @@ main(int argc, char **argv)
 			estat |= make(newname(*argv++), 0);
 	}
 
-#if ENABLE_FEATURE_MAKE_POSIX_202X
-	free((void *)numjobs);
-#endif
 #if ENABLE_FEATURE_CLEAN_UP
+# if ENABLE_FEATURE_MAKE_POSIX_202X
+	free((void *)numjobs);
+# endif
 	freenames();
 	freemacros();
 	freecmds(makefiles);

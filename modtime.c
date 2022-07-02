@@ -164,8 +164,7 @@ modtime(struct name *np)
 			error("can't open %s: %s", name, strerror(errno));
 		np->n_tim.tv_sec = 0;
 		np->n_tim.tv_nsec = 0;
-	}
-	else {
+	} else {
 		np->n_tim.tv_sec = info.st_mtim.tv_sec;
 		np->n_tim.tv_nsec = info.st_mtim.tv_nsec;
 	}
