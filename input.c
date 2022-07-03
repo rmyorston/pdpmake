@@ -9,7 +9,7 @@ int lineno;	// Physical line number in file
 int dispno;	// Line number for display purposes
 
 /*
- * Return a pointer to the next whitespace-delimited word or NULL if
+ * Return a pointer to the next blank-delimited word or NULL if
  * there are none left.
  */
 static char *
@@ -17,15 +17,15 @@ gettok(char **ptr)
 {
 	char *p;
 
-	while (isspace(**ptr))	// Skip spaces
+	while (isblank(**ptr))	// Skip blanks
 		(*ptr)++;
 
-	if (**ptr == '\0')	// Nothing after spaces
+	if (**ptr == '\0')	// Nothing after blanks
 		return NULL;
 
 	p = *ptr;		// Word starts here
 
-	while (**ptr != '\0' && !isspace(**ptr))
+	while (**ptr != '\0' && !isblank(**ptr))
 		(*ptr)++;	// Find end of word
 
 	// Terminate token and move on unless already at end of string
@@ -319,8 +319,8 @@ process_line(char *s)
 {
 	char *r, *t;
 
-	// Skip leading spaces
-	while (isspace(*s))
+	// Skip leading blanks
+	while (isblank(*s))
 		s++;
 	r = s;
 
@@ -329,11 +329,13 @@ process_line(char *s)
 	if (t)
 		*t = '\0';
 
-	// Replace escaped newline and any following blanks with a single space
-	for (t = s; *s; ) {
+	// Replace escaped newline and any leading white space on the
+	// following line with a single space.  Stop processing at a
+	// non-escaped newline.
+	for (t = s; *s && *s != '\n'; ) {
 		if (s[0] == '\\' && s[1] == '\n') {
 			s += 2;
-			while (isblank(*s))
+			while (isspace(*s))
 				++s;
 			*t++ = ' ';
 		} else {
@@ -506,11 +508,12 @@ readline(FILE *fd)
 		}
 		dispno = lineno;
 
+		// Check for comment lines and lines that are conditionally skipped.
 		p = str;
-		while (isspace(*p))	// Check for blank line
+		while (isblank(*p))
 			p++;
 
-		if (*p != '\0' && *str != '#'
+		if (*p != '\n' && *str != '#'
 				IF_FEATURE_MAKE_EXTENSIONS(&& (posix || !skip_line(str)))
 		) {
 			return str;
@@ -608,8 +611,9 @@ process_command(char *s)
 {
 	char *t, *u;
 
-	// Remove tab following escaped newline
-	for (t = u = s; *u; u++) {
+	// Remove tab following escaped newline.  Stop processing at a
+	// non-escaped newline.
+	for (t = u = s; *u && *u != '\n'; u++) {
 		if (u[0] == '\\' && u[1] == '\n' && u[2] == '\t') {
 			*t++ = *u++;
 			*t++ = *u++;
@@ -850,7 +854,7 @@ input(FILE *fd)
 			}
 #endif
 			*q++ = '\0';	// Separate name and value
-			while (isspace(*q))
+			while (isblank(*q))
 				q++;
 			if ((p = strrchr(q, '\n')) != NULL)
 				*p = '\0';

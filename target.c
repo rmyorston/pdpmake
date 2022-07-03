@@ -51,11 +51,6 @@ newcmd(char *str, struct cmd *cphead)
 {
 	struct cmd *cpnew;
 	struct cmd *cp;
-	char *s;
-
-	s = strrchr(str, '\n');
-	if (s != NULL)
-		*s = '\0';			// Drop newline
 
 	while (isspace(*str))
 		str++;
