@@ -4,7 +4,6 @@
 #include "make.h"
 #include <glob.h>
 
-int ilevel;	// Level of nesting of included files
 int lineno;	// Physical line number in file
 int dispno;	// Line number for display purposes
 
@@ -723,7 +722,7 @@ wildcard(char *p, glob_t *gd)
  * Parse input from the makefile and construct a tree structure of it.
  */
 void
-input(FILE *fd)
+input(FILE *fd, int ilevel)
 {
 	char *p, *q, *s, *a, *str, *expanded, *copy;
 	char *str1, *str2;
@@ -794,12 +793,18 @@ input(FILE *fd)
 						error("can't open include file '%s'", p);
 				} else {
 					makefile = p;
-					ilevel++;
-					input(ifd);
+					input(ifd, ilevel + 1);
 					fclose(ifd);
-					ilevel--;
 				}
+#if ENABLE_FEATURE_MAKE_EXTENSIONS
+				if (posix)
+					break;
+#endif
 			}
+#if ENABLE_FEATURE_MAKE_EXTENSIONS
+			if (posix && (p == NULL || gettok(&q)))
+				error("one include file per line");
+#endif
 
 			makefile = old_makefile;
 			lineno = old_lineno;

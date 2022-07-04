@@ -236,7 +236,6 @@ extern struct macro *macrohead[HTABSIZE];
 extern struct name *firstname;
 extern struct name *target;
 extern uint32_t opts;
-extern int ilevel;
 extern int lineno;
 extern int dispno;
 extern bool posix;
@@ -255,7 +254,7 @@ void print_details(void);
 #define expand_macros(s, e) expand_macros(s)
 #endif
 char *expand_macros(const char *str, int except_dollar);
-void input(FILE *fd);
+void input(FILE *fd, int ilevel);
 struct macro *getmp(const char *name);
 void setmacro(const char *name, const char *val, int level);
 void freemacros(void);

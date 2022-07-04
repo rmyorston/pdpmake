@@ -440,7 +440,7 @@ main(int argc, char **argv)
 	update_makeflags();
 
 	// Read built-in rules
-	input(NULL);
+	input(NULL, 0);
 
 	setmacro("SHELL", "/bin/sh", 4);
 	setmacro("MAKE", path, 4);
@@ -470,7 +470,7 @@ main(int argc, char **argv)
 		}
 		mp = mp->c_next;
  read_makefile:
-		input(ifd);
+		input(ifd, 0);
 		fclose(ifd);
 		makefile = NULL;
 	}
