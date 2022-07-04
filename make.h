@@ -223,9 +223,9 @@ struct macro {
 	uint8_t m_level;		// Level at which macro was created
 };
 
-// Flag passed to setmacro() to indicate that an immediate-expansion macro
-// is being defined.
-#define M_IMMEDIATE 8
+// Flags passed to setmacro()
+#define M_IMMEDIATE  8		// immediate-expansion macro is being defined
+#define M_VALID     16		// assert macro name is valid
 
 #define HTABSIZE 199
 
@@ -244,6 +244,11 @@ extern bool seen_first;
 #if ENABLE_FEATURE_MAKE_POSIX_202X
 extern char *numjobs;
 #endif
+
+// Return TRUE if c is allowed in a POSIX 2017 macro or target name
+#define ispname(c) (isalpha(c) || isdigit(c) || c == '.' || c == '_')
+// Return TRUE if c is in the POSIX 'portable filename character set'
+#define isfname(c) (ispname(c) || c == '-')
 
 void print_details(void);
 #if !ENABLE_FEATURE_MAKE_POSIX_202X

@@ -103,6 +103,17 @@ findname(const char *name)
 	return NULL;
 }
 
+static int
+is_valid_target(const char *name)
+{
+	const char *s;
+	for (s = name; *s; ++s) {
+		if (IF_FEATURE_MAKE_EXTENSIONS(posix &&) !ispname(*s))
+			return FALSE;
+	}
+	return TRUE;
+}
+
 /*
  * Intern a name.  Return a pointer to the name struct
  */
@@ -112,7 +123,12 @@ newname(const char *name)
 	struct name *np = findname(name);
 
 	if (np == NULL) {
-		unsigned int bucket = getbucket(name);
+		unsigned int bucket;
+
+		if (!is_valid_target(name))
+			error("invalid target name '%s'", name);
+
+		bucket = getbucket(name);
 		np = xmalloc(sizeof(struct name));
 		np->n_next = namehead[bucket];
 		namehead[bucket] = np;

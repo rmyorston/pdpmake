@@ -421,7 +421,7 @@ main(int argc, char **argv)
 	init_signal(SIGHUP);
 	init_signal(SIGTERM);
 
-	setmacro("$", "$", 0);
+	setmacro("$", "$", 0 | M_VALID);
 
 	// Process macro definitions from the command line
 	argv = process_macros(argv, 1);
@@ -434,7 +434,7 @@ main(int argc, char **argv)
 	}
 
 	// Process macro definitions from the environment
-	process_macros(environ, 3);
+	process_macros(environ, 3 | M_VALID);
 
 	// Update MAKEFLAGS and environment
 	update_makeflags();

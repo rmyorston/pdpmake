@@ -16,25 +16,38 @@ getmp(const char *name)
 	return NULL;
 }
 
+static int
+is_valid_macro(const char *name)
+{
+	const char *s;
+	for (s = name; *s; ++s) {
+		// In POSIX mode only a limited set of characters are guaranteed
+		// to be allowed in macro names.
+		if (IF_FEATURE_MAKE_EXTENSIONS(posix &&)
+				(ENABLE_FEATURE_MAKE_POSIX_202X ? !isfname(*s) : !ispname(*s)))
+			return FALSE;
+		// As an extension allow anything that can get through the
+		// input parser, apart from the following.
+		if (*s == '=')
+			return FALSE;
+#if ENABLE_FEATURE_MAKE_POSIX_202X
+		if (isblank(*s) || iscntrl(*s))
+			return FALSE;
+#endif
+	}
+	return TRUE;
+}
+
 void
 setmacro(const char *name, const char *val, int level)
 {
 	struct macro *mp;
-	const char *s;
+	bool valid = level & M_VALID;
 #if ENABLE_FEATURE_MAKE_EXTENSIONS || ENABLE_FEATURE_MAKE_POSIX_202X
-	bool immediate = FALSE;
-
-	if ((level & M_IMMEDIATE)) {
-		immediate = TRUE;
-		level &= ~M_IMMEDIATE;
-	}
+	bool immediate = level & M_IMMEDIATE;
 #endif
-	for (s = name; *s; ++s) {
-		if (*s == '=' || isspace(*s)) {
-			error("invalid macro name");
-		}
-	}
 
+	level &= ~(M_IMMEDIATE | M_VALID);
 	mp = getmp(name);
 	if (mp) {
 		// Don't replace existing macro from a lower level
@@ -45,7 +58,12 @@ setmacro(const char *name, const char *val, int level)
 		free(mp->m_val);
 	} else {
 		// If not defined, allocate space for new
-		unsigned int bucket = getbucket(name);
+		unsigned int bucket;
+
+		if (!valid && !is_valid_macro(name))
+			error("invalid macro name '%s'", name);
+
+		bucket = getbucket(name);
 		mp = xmalloc(sizeof(struct macro));
 		mp->m_next = macrohead[bucket];
 		macrohead[bucket] = mp;

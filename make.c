@@ -123,18 +123,18 @@ make1(struct name *np, struct cmd *cp, char *oodate, char *allsrc,
 	char *name, *member = NULL, *base;
 
 	name = splitlib(np->n_name, &member);
-	setmacro("?", oodate, 0);
+	setmacro("?", oodate, 0 | M_VALID);
 #if ENABLE_FEATURE_MAKE_POSIX_202X
 	if (!POSIX_2017)
-		setmacro("^", allsrc, 0);
+		setmacro("^", allsrc, 0 | M_VALID);
 #endif
-	setmacro("%", member, 0);
-	setmacro("@", name, 0);
+	setmacro("%", member, 0 | M_VALID);
+	setmacro("@", name, 0 | M_VALID);
 	if (implicit) {
-		setmacro("<", implicit->n_name, 0);
+		setmacro("<", implicit->n_name, 0 | M_VALID);
 		base = member ? member : name;
 		*suffix(base) = '\0';
-		setmacro("*", base, 0);
+		setmacro("*", base, 0 | M_VALID);
 	}
 	free(name);
 
