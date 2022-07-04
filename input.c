@@ -1060,13 +1060,17 @@ input(FILE *fd)
 		str1 = str2 ? str2 : readline(fd);
 		free(copy);
 		free(expanded);
+		if (!seen_first && fd) {
+			if (findname(".POSIX")) {
+				// The first non-comment line from a real makefile
+				// defined the .POSIX special target.
 #if ENABLE_FEATURE_MAKE_EXTENSIONS
-		if (first_line && findname(".POSIX")) {
-			setenv("PDPMAKE_POSIXLY_CORRECT", "", 1);
-			posix = TRUE;
-		}
-		first_line = FALSE;
+				setenv("PDPMAKE_POSIXLY_CORRECT", "", 1);
 #endif
+				posix = TRUE;
+			}
+			seen_first = TRUE;
+		}
 	}
 #if ENABLE_FEATURE_MAKE_EXTENSIONS
 	// Conditionals aren't allowed to span files

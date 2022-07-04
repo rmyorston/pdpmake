@@ -44,8 +44,9 @@ extern char **environ;
 
 // If ENABLE_FEATURE_MAKE_EXTENSIONS is non-zero some non-POSIX extensions
 // are enabled.
+//
 #ifndef ENABLE_FEATURE_MAKE_EXTENSIONS
-# define ENABLE_FEATURE_MAKE_EXTENSIONS 0
+# define ENABLE_FEATURE_MAKE_EXTENSIONS 1
 #endif
 
 #if ENABLE_FEATURE_MAKE_EXTENSIONS
@@ -59,16 +60,15 @@ extern char **environ;
 // IF ENABLE_FEATURE_MAKE_POSIX_202X is non-zero POSIX 202X features
 // are enabled.
 //
-// If ENABLE_FEATURE_MAKE_POSIX_202X is set implicitly by inheriting
-// the value of ENABLE_FEATURE_MAKE_EXTENSIONS the POSIX mode enforced
-// by .POSIX, PDPMAKE_POSIXLY_CORRECT or --posix remains POSIX 2017.
+// If ENABLE_FEATURE_MAKE_POSIX_202X and ENABLE_FEATURE_MAKE_EXTENSIONS
+// are both explicitly set non-zero the POSIX mode enforced by .POSIX,
+// PDPMAKE_POSIXLY_CORRECT or --posix is POSIX 202X.  In all other cases
+// the mode enforced by runtime settings is POSIX 2017.
 //
-// If ENABLE_FEATURE_MAKE_POSIX_202X is set explicitly the mode
-// enforced by runtime settings is POSIX 202X.
 #define POSIX_2017 posix
 #ifndef ENABLE_FEATURE_MAKE_POSIX_202X
 # define ENABLE_FEATURE_MAKE_POSIX_202X ENABLE_FEATURE_MAKE_EXTENSIONS
-#elif ENABLE_FEATURE_MAKE_POSIX_202X
+#elif ENABLE_FEATURE_MAKE_POSIX_202X && ENABLE_FEATURE_MAKE_EXTENSIONS
 # undef POSIX_2017
 # define POSIX_2017 0
 #endif
@@ -239,10 +239,8 @@ extern uint32_t opts;
 extern int ilevel;
 extern int lineno;
 extern int dispno;
-#if ENABLE_FEATURE_MAKE_EXTENSIONS
 extern bool posix;
-extern bool first_line;
-#endif
+extern bool seen_first;
 #if ENABLE_FEATURE_MAKE_POSIX_202X
 extern char *numjobs;
 #endif

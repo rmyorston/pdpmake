@@ -23,10 +23,8 @@ uint32_t opts;
 const char *myname;
 const char *makefile;
 struct cmd *makefiles;
-#if ENABLE_FEATURE_MAKE_EXTENSIONS
-bool posix = FALSE;
-bool first_line;
-#endif
+bool posix;
+bool seen_first;
 #if ENABLE_FEATURE_MAKE_POSIX_202X
 char *numjobs = NULL;
 #endif
@@ -450,9 +448,6 @@ main(int argc, char **argv)
 	free((void *)newpath);
 #endif
 
-#if ENABLE_FEATURE_MAKE_EXTENSIONS
-	first_line = TRUE;
-#endif
 	mp = makefiles;
 	if (!mp) {	// Look for a default Makefile
 		if ((ifd = fopen("makefile", "r")) != NULL)
