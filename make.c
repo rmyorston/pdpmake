@@ -113,11 +113,11 @@ touch(struct name *np)
 }
 
 #if !ENABLE_FEATURE_MAKE_POSIX_202X
-# define make1(n, c, o, a, i) make1(n, c, o, i)
+# define make1(n, c, o, a, d, i) make1(n, c, o, i)
 #endif
 static int
 make1(struct name *np, struct cmd *cp, char *oodate, char *allsrc,
-		struct name *implicit)
+		char *dedup, struct name *implicit)
 {
 	int estat = 0;	// 0 exit status is success
 	char *name, *member = NULL, *base;
@@ -125,8 +125,10 @@ make1(struct name *np, struct cmd *cp, char *oodate, char *allsrc,
 	name = splitlib(np->n_name, &member);
 	setmacro("?", oodate, 0 | M_VALID);
 #if ENABLE_FEATURE_MAKE_POSIX_202X
-	if (!POSIX_2017)
-		setmacro("^", allsrc, 0 | M_VALID);
+	if (!POSIX_2017) {
+		setmacro("+", allsrc, 0 | M_VALID);
+		setmacro("^", dedup, 0 | M_VALID);
+	}
 #endif
 	setmacro("%", member, 0 | M_VALID);
 	setmacro("@", name, 0 | M_VALID);
@@ -186,6 +188,7 @@ make(struct name *np, int level)
 	char *oodate = NULL;
 #if ENABLE_FEATURE_MAKE_POSIX_202X
 	char *allsrc = NULL;
+	char *dedup = NULL;
 #endif
 	struct timespec dtim = {1, 0};
 	bool didsomething = 0;
@@ -241,7 +244,7 @@ make(struct name *np, int level)
 	}
 #endif
 
-#if ENABLE_FEATURE_MAKE_EXTENSIONS
+#if ENABLE_FEATURE_MAKE_EXTENSIONS || ENABLE_FEATURE_MAKE_POSIX_202X
 	// Reset flag to detect duplicate prerequisites
 	if (!quest && !(np->n_flag & N_DOUBLE)) {
 		for (rp = np->n_rule; rp; rp = rp->r_next) {
@@ -280,22 +283,22 @@ make(struct name *np, int level)
 			// Make prerequisite
 			estat |= make(dp->d_name, level + 1);
 
-			// Make strings of out-of-date prerequisites (for $?)
-			// and all prerequisites (for $^).  But not if we were
-			// invoked with -q.
-			if (!quest
-#if ENABLE_FEATURE_MAKE_EXTENSIONS
-					// Skip duplicate entries.
-					&& (posix || !(dp->d_name->n_flag & N_MARK))
-#endif
-			) {
+			// Make strings of out-of-date prerequisites (for $?),
+			// all prerequisites (for $+) and deduplicated prerequisites
+			// (for $^).  But not if we were invoked with -q.
+			if (!quest) {
 				if (timespec_le(&np->n_tim, &dp->d_name->n_tim)) {
-					oodate = xappendword(oodate, dp->d_name->n_name);
+#if ENABLE_FEATURE_MAKE_EXTENSIONS
+					if (posix || !(dp->d_name->n_flag & N_MARK))
+#endif
+						oodate = xappendword(oodate, dp->d_name->n_name);
 				}
 #if ENABLE_FEATURE_MAKE_POSIX_202X
 				allsrc = xappendword(allsrc, dp->d_name->n_name);
+				if (!(dp->d_name->n_flag & N_MARK))
+					dedup = xappendword(dedup, dp->d_name->n_name);
 #endif
-#if ENABLE_FEATURE_MAKE_EXTENSIONS
+#if ENABLE_FEATURE_MAKE_EXTENSIONS || ENABLE_FEATURE_MAKE_POSIX_202X
 				dp->d_name->n_flag |= N_MARK;
 #endif
 			}
@@ -306,7 +309,7 @@ make(struct name *np, int level)
 			if (!quest && ((np->n_flag & N_PHONY) ||
 							timespec_le(&np->n_tim, &dtim))) {
 				if (estat == 0) {
-					estat = make1(np, rp->r_cmd, oodate, allsrc, locdep);
+					estat = make1(np, rp->r_cmd, oodate, allsrc, dedup, locdep);
 					dtim = (struct timespec){1, 0};
 					didsomething = 1;
 				}
@@ -315,7 +318,8 @@ make(struct name *np, int level)
 			}
 #if ENABLE_FEATURE_MAKE_POSIX_202X
 			free(allsrc);
-			allsrc = NULL;
+			free(dedup);
+			allsrc = dedup = NULL;
 #endif
 			if (locdep) {
 				rp->r_dep = rp->r_dep->d_next;
@@ -344,7 +348,7 @@ make(struct name *np, int level)
 				if (!doinclude)
 					warning("nothing to be done for %s", np->n_name);
 			} else {
-				estat = make1(np, sc_cmd, oodate, allsrc, impdep);
+				estat = make1(np, sc_cmd, oodate, allsrc, dedup, impdep);
 				clock_gettime(CLOCK_REALTIME, &np->n_tim);
 			}
 		} else if (!doinclude) {
@@ -358,6 +362,7 @@ make(struct name *np, int level)
 	}
 #if ENABLE_FEATURE_MAKE_POSIX_202X
 	free(allsrc);
+	free(dedup);
 #endif
 	return estat;
 }

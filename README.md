@@ -22,7 +22,7 @@ compatible with GNU make:
  - `*`/`?`/`[]` wildcards for filenames in target rules
  - `$(SRC:%.c=%.o)` pattern macro expansions
  - special handling of `MAKE` macro
- - `$^` internal macro
+ - `$^` and `$+` internal macros
  - skip duplicate entries in `$^` and `$?`
  - `.PHONY` special target
  - `-C directory` and `-j maxjobs` command line options
