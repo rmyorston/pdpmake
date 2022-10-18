@@ -623,7 +623,7 @@ process_command(char *s)
 	return s;
 }
 
-#if ENABLE_FEATURE_MAKE_EXTENSIONS
+#if ENABLE_FEATURE_MAKE_POSIX_202X
 static char *
 run_command(const char *cmd)
 {
@@ -659,7 +659,9 @@ run_command(const char *cmd)
 	}
 	return val;
 }
+#endif
 
+#if ENABLE_FEATURE_MAKE_EXTENSIONS
 /*
  * Check for an unescaped wildcard character
  */
@@ -835,8 +837,7 @@ input(FILE *fd, int ilevel)
 					}
 # endif
 # if ENABLE_FEATURE_MAKE_EXTENSIONS
-				case '!':
-					// ':=' and '!=' are non-POSIX extensions.
+					// ':=' is a non-POSIX extension.
 					if (posix)
 						break;
 					IF_FEATURE_MAKE_POSIX_202X(goto set_eq;)
@@ -846,7 +847,8 @@ input(FILE *fd, int ilevel)
 # if ENABLE_FEATURE_MAKE_POSIX_202X
 				case '+':
 				case '?':
-					// '+=' and '?=' are from POSIX 202X.
+				case '!':
+					// '+=', '?=' and '!=' are from POSIX 202X.
 					if (POSIX_2017)
 						break;
  IF_FEATURE_MAKE_EXTENSIONS(set_eq:)
@@ -900,10 +902,7 @@ input(FILE *fd, int ilevel)
 				if (rhs != q)
 					free(rhs);
 				q = newq;
-			}
-# endif
-# if ENABLE_FEATURE_MAKE_EXTENSIONS
-			else if (eq == '!') {
+			} else if (eq == '!') {
 				char *cmd = expand_macros(q, FALSE);
 				q = newq = run_command(cmd);
 				free(cmd);
