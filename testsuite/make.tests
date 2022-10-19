@@ -318,14 +318,6 @@ target:
 
 cd .. || exit 1; rm -rf make.tempdir 2>/dev/null
 
-SKIP=
-
-# =================================================================
-# The following tests require non-POSIX extensions to be enabled.
-# They're expected to fail in POSIX mode.
-# =================================================================
-
-optional FEATURE_MAKE_EXTENSIONS
 # Nested macro expansion is allowed.  This should be compatible
 # with other implementations.
 testing "Nested macro expansion" \
@@ -344,6 +336,14 @@ target:
 	@echo 5 $($a$b$c)
 '
 
+SKIP=
+
+# =================================================================
+# The following tests require non-POSIX extensions to be enabled.
+# They're expected to fail in POSIX mode.
+# =================================================================
+
+optional FEATURE_MAKE_EXTENSIONS
 testing "Double-colon rule" \
 	"make -f -" "target1\ntarget2\n" "" '
 target::

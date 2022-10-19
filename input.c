@@ -235,9 +235,9 @@ expand_macros(const char *str, int except_dollar)
 			}
 
 			p = q = name;
-#if ENABLE_FEATURE_MAKE_EXTENSIONS
+#if ENABLE_FEATURE_MAKE_POSIX_202X
 			// If not in POSIX mode expand macros in the name.
-			if (!posix) {
+			if (!POSIX_2017) {
 				char *expname = expand_macros(name, FALSE);
 				free(name);
 				name = expname;
