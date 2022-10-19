@@ -565,6 +565,8 @@ target_type(char *s)
 		".SUFFIXES",
 #if ENABLE_FEATURE_MAKE_POSIX_202X
 		".PHONY",
+		".NOTPARALLEL",
+		".WAIT",
 #endif
 	};
 
@@ -948,6 +950,10 @@ input(FILE *fd, int ilevel)
 		dp = NULL;
 		while (((p = gettok(&q)) != NULL)) {
 #if !ENABLE_FEATURE_MAKE_EXTENSIONS
+# if ENABLE_FEATURE_MAKE_POSIX_202X
+			if (!POSIX_2017 && strcmp(p, ".WAIT") == 0)
+				continue;
+# endif
 			np = newname(p);
 			dp = newdep(np, dp);
 #else
@@ -988,6 +994,10 @@ input(FILE *fd, int ilevel)
 				files = gd.gl_pathv;
 			}
 			for (i = 0; i < nfile; ++i) {
+# if ENABLE_FEATURE_MAKE_POSIX_202X
+				if (!POSIX_2017 && strcmp(files[i], ".WAIT") == 0)
+					continue;
+# endif
 				np = newname(files[i]);
 				dp = newdep(np, dp);
 			}
