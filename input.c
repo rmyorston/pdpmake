@@ -253,6 +253,7 @@ expand_macros(const char *str, int except_dollar)
 			switch (name[0]) {
 #if ENABLE_FEATURE_MAKE_POSIX_202X
 			case '^':
+			case '+':
 				if (POSIX_2017)
 					break;
 				// fall through
