@@ -800,14 +800,22 @@ input(FILE *fd, int ilevel)
 					input(ifd, ilevel + 1);
 					fclose(ifd);
 				}
-#if ENABLE_FEATURE_MAKE_EXTENSIONS
-				if (posix)
+#if ENABLE_FEATURE_MAKE_POSIX_202X
+				if (POSIX_2017)
 					break;
 #endif
 			}
-#if ENABLE_FEATURE_MAKE_EXTENSIONS
-			if (posix && (p == NULL || gettok(&q)))
-				error("one include file per line");
+#if ENABLE_FEATURE_MAKE_POSIX_202X
+			if (POSIX_2017) {
+				// In POSIX 2017 zero or more than one include file is
+				// unspecified behaviour.
+				if (p == NULL || gettok(&q)) {
+					error("one include file per line");
+				}
+			} else if (posix && makefile == old_makefile) {
+				// In POSIX 202X no include file is unspecified behaviour.
+				error("no include file");
+			}
 #endif
 
 			makefile = old_makefile;
