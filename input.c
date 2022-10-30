@@ -612,17 +612,44 @@ static char *
 process_command(char *s)
 {
 	char *t, *u;
+#if ENABLE_FEATURE_MAKE_POSIX_202X
+	int len = strlen(s) + 1;
+	char *outside = xmalloc(len);
 
-	// Remove tab following escaped newline.  Stop processing at a
-	// non-escaped newline.
-	for (t = u = s; *u && *u != '\n'; u++) {
-		*t++ = *u;
+	memset(outside, 0, len);
+	for (t = skip_macro(s); *t; t = skip_macro(t + 1)) {
+		outside[t - s] = 1;
+	}
+#endif
+
+	// Process escaped newlines.  Stop at first non-escaped newline.
+	for (t = u = s; *u && *u != '\n'; ) {
 		if (u[0] == '\\' && u[1] == '\n') {
-			*t++ = '\n';
-			u += (u[2] == '\t') ? 2 : 1;
+#if ENABLE_FEATURE_MAKE_POSIX_202X
+			if (POSIX_2017 || outside[u - s]) {
+#endif
+				// Outside macro: remove tab following escaped newline.
+				*t++ = *u++;
+				*t++ = *u++;
+				u += (*u == '\t');
+#if ENABLE_FEATURE_MAKE_POSIX_202X
+			} else {
+				// Inside macro: replace escaped newline and any leading
+				// whitespace on the following line with a single space.
+				u += 2;
+				while (isspace(*u))
+					++u;
+				*t++ = ' ';
+			}
+#endif
+		} else {
+			*t++ = *u++;
 		}
 	}
 	*t = '\0';
+#if ENABLE_FEATURE_MAKE_POSIX_202X
+	free(outside);
+#endif
 	return s;
 }
 

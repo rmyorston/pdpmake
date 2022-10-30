@@ -345,6 +345,19 @@ target: file1 .WAIT file2
 	@echo $^
 '
 cd .. || exit 1; rm -rf make.tempdir 2>/dev/null
+
+# Escaped newlines inside macro expansions in commands get different
+# treatment than those outside.  In POSIX 2017 the output is 'a b ab'.
+testing "Replace escaped NL in macro in command with space" \
+	"make -f -" \
+	"a b a b\n" "" '
+M=word
+N=${M:word=a\
+b}
+target:
+	@echo ${N} ${M:word=a\
+b}
+'
 SKIP=
 
 # =================================================================
