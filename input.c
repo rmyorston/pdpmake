@@ -325,7 +325,13 @@ process_line(char *s)
 	r = s;
 
 	// Strip comment
-	t = strchr(s, '#');
+#if ENABLE_FEATURE_MAKE_EXTENSIONS
+	// don't treat '#' in macro expansion as a comment
+	if (!posix)
+		t = find_char(s, '#');
+	else
+#endif
+		t = strchr(s, '#');
 	if (t)
 		*t = '\0';
 
@@ -613,9 +619,20 @@ process_command(char *s)
 {
 	char *t, *u;
 #if ENABLE_FEATURE_MAKE_POSIX_202X
-	int len = strlen(s) + 1;
-	char *outside = xmalloc(len);
+	int len;
+	char *outside;
+#endif
 
+	if (!ENABLE_FEATURE_MAKE_EXTENSIONS || posix) {
+		// POSIX strips comments from command lines
+		t = strchr(s, '#');
+		if (t)
+			*t = '\0';
+	}
+
+#if ENABLE_FEATURE_MAKE_POSIX_202X
+	len = strlen(s) + 1;
+	outside = xmalloc(len);
 	memset(outside, 0, len);
 	for (t = skip_macro(s); *t; t = skip_macro(t + 1)) {
 		outside[t - s] = 1;
