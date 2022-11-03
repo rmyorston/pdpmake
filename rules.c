@@ -67,19 +67,21 @@ dyndep(struct name *np, struct rule *imprule)
 			sp = namecat(newsuff, suff, FALSE);
 			if (sp && sp->n_rule) {
 				// Generate a name for an implicit prerequisite
-				pp = namecat(base, newsuff, TRUE);
-				if (!pp->n_tim.tv_sec)
-					modtime(pp);
-				if ((!chain && (pp->n_tim.tv_sec || getcmd(pp))) ||
-						(chain && dyndep(pp, NULL))) {
+				struct name *ip = namecat(base, newsuff, TRUE);
+				if ((ip->n_flag & N_DOING))
+					continue;
+				if (!ip->n_tim.tv_sec)
+					modtime(ip);
+				if (chain ? ip->n_tim.tv_sec || (ip->n_flag & N_TARGET) :
+							dyndep(ip, NULL) != NULL) {
 					// Prerequisite exists or we know how to make it
 					if (imprule) {
-						imprule->r_dep = newdep(pp, NULL);
+						imprule->r_dep = newdep(ip, NULL);
 						imprule->r_cmd = sp->n_rule->r_cmd;
 					}
+					pp = ip;
 					goto finish;
 				}
-				pp = NULL;
 			}
 		}
 	}

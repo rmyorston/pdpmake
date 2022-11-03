@@ -281,6 +281,7 @@ make(struct name *np, int level)
 #endif
 		for (dp = rp->r_dep; dp; dp = dp->d_next) {
 			// Make prerequisite
+			dp->d_name->n_flag |= N_TARGET;
 			estat |= make(dp->d_name, level + 1);
 
 			// Make strings of out-of-date prerequisites (for $?),
@@ -338,28 +339,28 @@ make(struct name *np, int level)
 
 	if (quest) {
 		if (timespec_le(&np->n_tim, &dtim)) {
-			clock_gettime(CLOCK_REALTIME, &np->n_tim);
-			return 1;	// 1 means rebuild is needed
+			didsomething = 1;
+			estat = 1;	// 1 means rebuild is needed
 		}
 	} else if (!(np->n_flag & N_DOUBLE) &&
 				((np->n_flag & N_PHONY) || (timespec_le(&np->n_tim, &dtim)))) {
 		if (estat == 0) {
-			if (!sc_cmd) {
-				if (!doinclude)
-					warning("nothing to be done for %s", np->n_name);
-			} else {
+			if (sc_cmd)
 				estat = make1(np, sc_cmd, oodate, allsrc, dedup, impdep);
-				clock_gettime(CLOCK_REALTIME, &np->n_tim);
-			}
+			else if (!doinclude)
+				warning("nothing to be done for %s", np->n_name);
+			didsomething = 1;
 		} else if (!doinclude) {
 			warning("'%s' not built due to errors", np->n_name);
 		}
 		free(oodate);
-	} else if (didsomething) {
-		clock_gettime(CLOCK_REALTIME, &np->n_tim);
-	} else if (level == 0) {
-		printf("%s: '%s' is up to date\n", myname, np->n_name);
 	}
+
+	if (didsomething)
+		clock_gettime(CLOCK_REALTIME, &np->n_tim);
+	else if (!quest && level == 0)
+		printf("%s: '%s' is up to date\n", myname, np->n_name);
+
 #if ENABLE_FEATURE_MAKE_POSIX_202X
 	free(allsrc);
 	free(dedup);
