@@ -51,6 +51,9 @@ then
 	OPTIONFLAGS="::"
 fi
 
+# The feature tests above required PDPMAKE_POSIXLY_CORRECT to be
+# unset.  To run the tests in POSIX mode uncomment the following.
+# export PDPMAKE_POSIXLY_CORRECT=1
 status=0
 PATH="$tsdir:$bindir:$PATH" \
 	"$tsdir/make.tests"
