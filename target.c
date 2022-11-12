@@ -108,7 +108,9 @@ is_valid_target(const char *name)
 {
 	const char *s;
 	for (s = name; *s; ++s) {
-		if (IF_FEATURE_MAKE_EXTENSIONS(posix &&) !ispname(*s))
+		if (IF_FEATURE_MAKE_EXTENSIONS(posix &&)
+				((ENABLE_FEATURE_MAKE_POSIX_202X && !POSIX_2017)?
+						!(isfname(*s) || *s == '/') : !ispname(*s)))
 			return FALSE;
 	}
 	return TRUE;

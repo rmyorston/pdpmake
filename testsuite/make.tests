@@ -377,6 +377,19 @@ target:
 	@echo ${N} ${M:word=a\
 b}
 '
+
+# POSIX 202X permits additional characters in macro and target names
+testing "Allow - and / in target names, - in macro names" \
+	"make -f -" \
+	"/hello\nhel-lo\nmac-ro\n" "" '
+target: ./hello hel-lo
+	@echo $(mac-ro)
+./hello:
+	@echo /hello
+hel-lo:
+	@echo hel-lo
+mac-ro = mac-ro
+'
 SKIP=
 
 # =================================================================

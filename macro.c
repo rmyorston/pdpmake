@@ -24,7 +24,8 @@ is_valid_macro(const char *name)
 		// In POSIX mode only a limited set of characters are guaranteed
 		// to be allowed in macro names.
 		if (IF_FEATURE_MAKE_EXTENSIONS(posix &&)
-				(ENABLE_FEATURE_MAKE_POSIX_202X ? !isfname(*s) : !ispname(*s)))
+				((ENABLE_FEATURE_MAKE_POSIX_202X && !POSIX_2017) ?
+					!isfname(*s) : !ispname(*s)))
 			return FALSE;
 		// As an extension allow anything that can get through the
 		// input parser, apart from the following.
