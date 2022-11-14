@@ -179,7 +179,7 @@ struct name {
 #define N_SILENT	0x20	// Build target silently
 #define N_IGNORE	0x40	// Ignore build errors
 #define N_SPECIAL	0x80	// Special target
-#if ENABLE_FEATURE_MAKE_EXTENSIONS
+#if ENABLE_FEATURE_MAKE_EXTENSIONS || ENABLE_FEATURE_MAKE_POSIX_202X
 #define N_MARK		0x100	// Mark for deduplication
 #endif
 #if ENABLE_FEATURE_MAKE_POSIX_202X
