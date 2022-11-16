@@ -22,7 +22,7 @@
 uint32_t opts;
 const char *myname;
 const char *makefile;
-struct cmd *makefiles;
+struct file *makefiles;
 bool posix;
 bool seen_first;
 #if ENABLE_FEATURE_MAKE_POSIX_202X
@@ -71,7 +71,7 @@ process_options(int argc, char **argv, int from_env)
 #endif
 		case 'f':	// Alternate file name
 			if (!from_env) {
-				makefiles = newcmd(optarg, makefiles);
+				makefiles = newfile(optarg, makefiles);
 				flags |= OPT_f;
 			}
 			break;
@@ -371,7 +371,7 @@ main(int argc, char **argv)
 	char **fargv, **fargv0;
 	int fargc, estat;
 	FILE *ifd;
-	struct cmd *mp;
+	struct file *fp;
 
 	if (argc == 0) {
 		return EXIT_FAILURE;
@@ -448,8 +448,8 @@ main(int argc, char **argv)
 	free((void *)newpath);
 #endif
 
-	mp = makefiles;
-	if (!mp) {	// Look for a default Makefile
+	fp = makefiles;
+	if (!fp) {	// Look for a default Makefile
 		if ((ifd = fopen("makefile", "r")) != NULL)
 			makefile = "makefile";
 		else if ((ifd = fopen("Makefile", "r")) != NULL)
@@ -459,16 +459,16 @@ main(int argc, char **argv)
 		goto read_makefile;
 	}
 
-	while (mp) {
-		if (strcmp(mp->c_cmd, "-") == 0) {	// Can use stdin as makefile
+	while (fp) {
+		if (strcmp(fp->f_name, "-") == 0) {	// Can use stdin as makefile
 			ifd = stdin;
 			makefile = "stdin";
 		} else {
-			if ((ifd = fopen(mp->c_cmd, "r")) == NULL)
-				error("can't open %s: %s", mp->c_cmd, strerror(errno));
-			makefile = mp->c_cmd;
+			if ((ifd = fopen(fp->f_name, "r")) == NULL)
+				error("can't open %s: %s", fp->f_name, strerror(errno));
+			makefile = fp->f_name;
 		}
-		mp = mp->c_next;
+		fp = fp->f_next;
  read_makefile:
 		input(ifd, 0);
 		fclose(ifd);
@@ -502,7 +502,7 @@ main(int argc, char **argv)
 # endif
 	freenames();
 	freemacros();
-	freecmds(makefiles);
+	freefiles(makefiles);
 #endif
 
 	return estat;

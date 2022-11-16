@@ -223,6 +223,12 @@ struct macro {
 	uint8_t m_level;		// Level at which macro was created
 };
 
+// List of file names
+struct file {
+	struct file *f_next;
+	char *f_name;
+};
+
 // Flags passed to setmacro()
 #define M_IMMEDIATE  8		// immediate-expansion macro is being defined
 #define M_VALID     16		// assert macro name is valid
@@ -286,3 +292,5 @@ char *xstrdup(const char *s);
 char *xstrndup(const char *s, size_t n);
 char *xappendword(const char *str, const char *word);
 unsigned int getbucket(const char *name);
+struct file *newfile(char *str, struct file *fphead);
+void freefiles(struct file *fp);

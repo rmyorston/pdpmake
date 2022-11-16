@@ -114,3 +114,42 @@ getbucket(const char *name)
 		hashval ^= (hashval << 5) + (hashval >> 2) + *p++;
 	return hashval % HTABSIZE;
 }
+
+/*
+ * Add a file to the end of the supplied list of files.
+ * Return the new head pointer for that list.
+ */
+struct file *
+newfile(char *str, struct file *fphead)
+{
+	struct file *fpnew;
+	struct file *fp;
+
+	fpnew = xmalloc(sizeof(struct cmd));
+	fpnew->f_next = NULL;
+	fpnew->f_name = xstrdup(str);
+
+	if (fphead == NULL)
+		return fpnew;
+
+	for (fp = fphead; fp->f_next; fp = fp->f_next)
+		;
+
+	fp->f_next = fpnew;
+
+	return fphead;
+}
+
+#if ENABLE_FEATURE_CLEAN_UP
+void
+freefiles(struct file *fp)
+{
+	struct file *nextfp;
+
+	for (; fp; fp = nextfp) {
+		nextfp = fp->f_next;
+		free(fp->f_name);
+		free(fp);
+	}
+}
+#endif
