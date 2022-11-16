@@ -209,6 +209,8 @@ struct cmd {
 	struct cmd *c_next;		// Next command line
 	char *c_cmd;			// Text of command line
 	int c_refcnt;			// Reference count
+	const char *c_makefile;	// Makefile in which command was defined
+	int c_dispno;			// Line number within makefile
 };
 
 // Macro storage

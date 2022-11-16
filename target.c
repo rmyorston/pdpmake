@@ -62,6 +62,8 @@ newcmd(char *str, struct cmd *cphead)
 	cpnew->c_next = NULL;
 	cpnew->c_cmd = xstrdup(str);
 	cpnew->c_refcnt = 0;
+	cpnew->c_makefile = makefile;
+	cpnew->c_dispno = dispno;
 
 	if (cphead == NULL)
 		return cpnew;

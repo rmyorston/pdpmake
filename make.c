@@ -27,6 +27,9 @@ docmds(struct name *np, struct cmd *cp)
 	for (; cp; cp = cp->c_next) {
 		uint8_t ssilent, signore, sdomake;
 
+		// Location of command in makefile (for use in error messages)
+		makefile = cp->c_makefile;
+		dispno = cp->c_dispno;
 #if ENABLE_FEATURE_MAKE_POSIX_202X
 		opts &= ~OPT_make;	// We want to know if $(MAKE) is expanded
 #endif
@@ -84,6 +87,7 @@ docmds(struct name *np, struct cmd *cp)
 		}
 		free(command);
 	}
+	makefile = NULL;
 	return estat;
 }
 

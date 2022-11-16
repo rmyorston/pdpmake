@@ -4,21 +4,30 @@
 #include "make.h"
 
 /*
- * Error handler.  Print message, with line number, and exit.
+ * Print message, with makefile and line number if possible.
+ */
+static void
+vwarning(const char *msg, va_list list)
+{
+	if (makefile)
+		fprintf(stderr, "%s: (%s:%d): ", myname, makefile, dispno);
+	else
+		fprintf(stderr, "%s: ", myname);
+	vfprintf(stderr, msg, list);
+	fputc('\n', stderr);
+}
+
+/*
+ * Error handler.  Print message and exit.
  */
 void
 error(const char *msg, ...)
 {
 	va_list list;
 
-	if (makefile)
-		fprintf(stderr, "%s:%d: ", makefile, dispno);
-	else
-		fprintf(stderr, "%s: ", myname);
 	va_start(list, msg);
-	vfprintf(stderr, msg, list);
+	vwarning(msg, list);
 	va_end(list);
-	fputc('\n', stderr);
 	exit(2);
 }
 
@@ -41,11 +50,9 @@ warning(const char *msg, ...)
 {
 	va_list list;
 
-	fprintf(stderr, "%s: ", myname);
 	va_start(list, msg);
-	vfprintf(stderr, msg, list);
+	vwarning(msg, list);
 	va_end(list);
-	fputc('\n', stderr);
 }
 
 void *
