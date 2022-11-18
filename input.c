@@ -236,8 +236,12 @@ expand_macros(const char *str, int except_dollar)
 					} else
 #endif
 					{
-						if (IF_FEATURE_MAKE_EXTENSIONS(posix &&) lenf == 0)
-							error("empty suffix");
+						if (IF_FEATURE_MAKE_EXTENSIONS(posix &&
+									!(pragma & P_EMPTY_SUFFIX) &&)
+								lenf == 0)
+							error("empty suffix%s",
+								!ENABLE_FEATURE_MAKE_EXTENSIONS ? "" :
+									".  Allow with .PRAGMA: empty_suffix");
 						find_suff = expfind;
 						repl_suff = replace;
 						lenr = strlen(repl_suff);
@@ -586,6 +590,9 @@ target_type(char *s)
 		".NOTPARALLEL",
 		".WAIT",
 #endif
+#if ENABLE_FEATURE_MAKE_EXTENSIONS
+		".PRAGMA",
+#endif
 	};
 
 	if (*s != '.')
@@ -634,12 +641,18 @@ process_command(char *s)
 	char *outside;
 #endif
 
-	if (!ENABLE_FEATURE_MAKE_EXTENSIONS || posix) {
+#if ENABLE_FEATURE_MAKE_EXTENSIONS
+	if (!ENABLE_FEATURE_MAKE_EXTENSIONS ||
+			(IF_FEATURE_MAKE_EXTENSIONS(!(pragma & P_COMMAND_COMMENT) &&)
+				posix)) {
 		// POSIX strips comments from command lines
 		t = strchr(s, '#');
-		if (t)
+		if (t) {
 			*t = '\0';
+			warning("comment in command.  Allow with .PRAGMA: command_comment");
+		}
 	}
+#endif
 
 #if ENABLE_FEATURE_MAKE_POSIX_202X
 	len = strlen(s) + 1;

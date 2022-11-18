@@ -28,6 +28,9 @@ bool seen_first;
 #if ENABLE_FEATURE_MAKE_POSIX_202X
 char *numjobs = NULL;
 #endif
+#if ENABLE_FEATURE_MAKE_EXTENSIONS
+unsigned char pragma = 0;
+#endif
 
 static void
 usage(void)

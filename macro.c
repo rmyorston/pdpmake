@@ -24,8 +24,10 @@ is_valid_macro(const char *name)
 		// In POSIX mode only a limited set of characters are guaranteed
 		// to be allowed in macro names.
 		if (IF_FEATURE_MAKE_EXTENSIONS(posix &&)
-				((ENABLE_FEATURE_MAKE_POSIX_202X && !POSIX_2017) ?
-					!isfname(*s) : !ispname(*s)))
+				((
+					IF_FEATURE_MAKE_EXTENSIONS((pragma & P_MACRO_NAME) ||)
+					(ENABLE_FEATURE_MAKE_POSIX_202X && !POSIX_2017)
+				) ? !isfname(*s) : !ispname(*s)))
 			return FALSE;
 		// As an extension allow anything that can get through the
 		// input parser, apart from the following.
@@ -38,6 +40,21 @@ is_valid_macro(const char *name)
 	}
 	return TRUE;
 }
+
+#if ENABLE_FEATURE_MAKE_EXTENSIONS
+static int
+potentially_valid_macro(const char *name)
+{
+	int ret = FALSE;
+
+	if (!(pragma & P_MACRO_NAME)) {
+		pragma |= P_MACRO_NAME;
+		ret = is_valid_macro(name);
+		pragma &= ~P_MACRO_NAME;
+	}
+	return ret;
+}
+#endif
 
 void
 setmacro(const char *name, const char *val, int level)
@@ -62,7 +79,13 @@ setmacro(const char *name, const char *val, int level)
 		unsigned int bucket;
 
 		if (!valid && !is_valid_macro(name))
+#if ENABLE_FEATURE_MAKE_EXTENSIONS
+			error("invalid macro name '%s'%s", name,
+					potentially_valid_macro(name) ?
+					".  Allow with .PRAGMA: macro_name" : "");
+#else
 			error("invalid macro name '%s'", name);
+#endif
 
 		bucket = getbucket(name);
 		mp = xmalloc(sizeof(struct macro));

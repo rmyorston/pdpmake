@@ -111,12 +111,29 @@ is_valid_target(const char *name)
 	const char *s;
 	for (s = name; *s; ++s) {
 		if (IF_FEATURE_MAKE_EXTENSIONS(posix &&)
-				((ENABLE_FEATURE_MAKE_POSIX_202X && !POSIX_2017)?
-						!(isfname(*s) || *s == '/') : !ispname(*s)))
+				((
+					IF_FEATURE_MAKE_EXTENSIONS((pragma & P_TARGET_NAME) ||)
+					(ENABLE_FEATURE_MAKE_POSIX_202X && !POSIX_2017)
+				) ? !(isfname(*s) || *s == '/') : !ispname(*s)))
 			return FALSE;
 	}
 	return TRUE;
 }
+
+#if ENABLE_FEATURE_MAKE_EXTENSIONS
+static int
+potentially_valid_target(const char *name)
+{
+	int ret = FALSE;
+
+	if (!(pragma & P_TARGET_NAME)) {
+		pragma |= P_TARGET_NAME;
+		ret = is_valid_target(name);
+		pragma &= ~P_TARGET_NAME;
+	}
+	return ret;
+}
+#endif
 
 /*
  * Intern a name.  Return a pointer to the name struct
@@ -130,7 +147,13 @@ newname(const char *name)
 		unsigned int bucket;
 
 		if (!is_valid_target(name))
+#if ENABLE_FEATURE_MAKE_EXTENSIONS
+			error("invalid target name '%s'%s", name,
+					potentially_valid_target(name) ?
+						".  Allow with .PRAGMA: target_name" : "");
+#else
 			error("invalid target name '%s'", name);
+#endif
 
 		bucket = getbucket(name);
 		np = xmalloc(sizeof(struct name));
@@ -235,6 +258,10 @@ addrule(struct name *np, struct depend *dp, struct cmd *cp, int flag)
 		if (strcmp(np->n_name, ".PHONY") == 0)
 			return;
 #endif
+#if ENABLE_FEATURE_MAKE_EXTENSIONS
+		if (strcmp(np->n_name, ".PRAGMA") == 0)
+			pragma = 0;
+#endif
 		freerules(np->n_rule);
 		np->n_rule = NULL;
 		return;
@@ -262,4 +289,29 @@ addrule(struct name *np, struct depend *dp, struct cmd *cp, int flag)
 	np->n_flag |= N_TARGET;
 	if (flag)
 		np->n_flag |= N_DOUBLE;
+#if ENABLE_FEATURE_MAKE_EXTENSIONS
+	if (strcmp(np->n_name, ".PRAGMA") == 0) {
+		// Order must match constants in make.h
+		static const char *p_name[] = {
+			"macro_name",
+			"target_name",
+			"command_comment",
+			"empty_suffix",
+			"posix_202x"
+		};
+
+		for (; dp; dp = dp->d_next) {
+			int i;
+
+			for (i = 0; i < sizeof(p_name)/sizeof(p_name[0]); ++i) {
+				if (strcmp(dp->d_name->n_name, p_name[i]) == 0) {
+					pragma |= 1 << i;
+					break;
+				}
+			}
+			if (i == sizeof(p_name)/sizeof(p_name[0]))
+				warning("invalid .PRAGMA %s", dp->d_name->n_name);
+		}
+	}
+#endif
 }

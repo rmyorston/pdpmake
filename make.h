@@ -52,9 +52,11 @@ extern char **environ;
 #if ENABLE_FEATURE_MAKE_EXTENSIONS
 # define IF_FEATURE_MAKE_EXTENSIONS(...) __VA_ARGS__
 # define IF_NOT_FEATURE_MAKE_EXTENSIONS(...)
+# define POSIX_2017 (posix && !(pragma & P_POSIX_202X))
 #else
 # define IF_FEATURE_MAKE_EXTENSIONS(...)
 # define IF_NOT_FEATURE_MAKE_EXTENSIONS(...) __VA_ARGS__
+# define POSIX_2017 posix
 #endif
 
 // IF ENABLE_FEATURE_MAKE_POSIX_202X is non-zero POSIX 202X features
@@ -65,7 +67,6 @@ extern char **environ;
 // PDPMAKE_POSIXLY_CORRECT or --posix is POSIX 202X.  In all other cases
 // the mode enforced by runtime settings is POSIX 2017.
 //
-#define POSIX_2017 posix
 #ifndef ENABLE_FEATURE_MAKE_POSIX_202X
 # define ENABLE_FEATURE_MAKE_POSIX_202X ENABLE_FEATURE_MAKE_EXTENSIONS
 #elif ENABLE_FEATURE_MAKE_POSIX_202X && ENABLE_FEATURE_MAKE_EXTENSIONS
@@ -237,6 +238,13 @@ struct file {
 
 #define HTABSIZE 199
 
+// Constants for PRAGMA.  Order must match strings in addrule().
+#define P_MACRO_NAME			0x01
+#define P_TARGET_NAME			0x02
+#define P_COMMAND_COMMENT		0x04
+#define P_EMPTY_SUFFIX			0x08
+#define P_POSIX_202X			0x10
+
 extern const char *myname;
 extern const char *makefile;
 extern struct name *namehead[HTABSIZE];
@@ -250,6 +258,9 @@ extern bool posix;
 extern bool seen_first;
 #if ENABLE_FEATURE_MAKE_POSIX_202X
 extern char *numjobs;
+#endif
+#if ENABLE_FEATURE_MAKE_EXTENSIONS
+extern unsigned char pragma;
 #endif
 
 // Return TRUE if c is allowed in a POSIX 2017 macro or target name
