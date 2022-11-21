@@ -150,7 +150,7 @@ newname(const char *name)
 #if ENABLE_FEATURE_MAKE_EXTENSIONS
 			error("invalid target name '%s'%s", name,
 					potentially_valid_target(name) ?
-						".  Allow with .PRAGMA: target_name" : "");
+						": allow with pragma target_name" : "");
 #else
 			error("invalid target name '%s'", name);
 #endif
@@ -227,6 +227,30 @@ inc_ref(void *vp)
 	return vp;
 }
 
+#if ENABLE_FEATURE_MAKE_EXTENSIONS
+void
+set_pragma(const char *name)
+{
+	// Order must match constants in make.h
+	static const char *p_name[] = {
+		"macro_name",
+		"target_name",
+		"command_comment",
+		"empty_suffix",
+		"posix_202x"
+	};
+	int i;
+
+	for (i = 0; i < sizeof(p_name)/sizeof(p_name[0]); ++i) {
+		if (strcmp(name, p_name[i]) == 0) {
+			pragma |= 1 << i;
+			return;
+		}
+	}
+	warning("invalid pragma '%s'", name);
+}
+#endif
+
 /*
  * Add a new rule to a target.  This checks to see if commands already
  * exist for the target.  If flag is TRUE the target can have multiple
@@ -291,26 +315,8 @@ addrule(struct name *np, struct depend *dp, struct cmd *cp, int flag)
 		np->n_flag |= N_DOUBLE;
 #if ENABLE_FEATURE_MAKE_EXTENSIONS
 	if (strcmp(np->n_name, ".PRAGMA") == 0) {
-		// Order must match constants in make.h
-		static const char *p_name[] = {
-			"macro_name",
-			"target_name",
-			"command_comment",
-			"empty_suffix",
-			"posix_202x"
-		};
-
 		for (; dp; dp = dp->d_next) {
-			int i;
-
-			for (i = 0; i < sizeof(p_name)/sizeof(p_name[0]); ++i) {
-				if (strcmp(dp->d_name->n_name, p_name[i]) == 0) {
-					pragma |= 1 << i;
-					break;
-				}
-			}
-			if (i == sizeof(p_name)/sizeof(p_name[0]))
-				warning("invalid .PRAGMA %s", dp->d_name->n_name);
+			set_pragma(dp->d_name->n_name);
 		}
 	}
 #endif

@@ -241,7 +241,7 @@ expand_macros(const char *str, int except_dollar)
 								lenf == 0)
 							error("empty suffix%s",
 								!ENABLE_FEATURE_MAKE_EXTENSIONS ? "" :
-									".  Allow with .PRAGMA: empty_suffix");
+									": allow with pragma empty_suffix");
 						find_suff = expfind;
 						repl_suff = replace;
 						lenr = strlen(repl_suff);
@@ -649,7 +649,7 @@ process_command(char *s)
 		t = strchr(s, '#');
 		if (t) {
 			*t = '\0';
-			warning("comment in command.  Allow with .PRAGMA: command_comment");
+			warning("comment in command removed: keep with pragma command_comment");
 		}
 	}
 #endif

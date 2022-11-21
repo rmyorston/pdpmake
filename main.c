@@ -1,11 +1,12 @@
 /*
- * make [--posix] [-C path] [-f makefile] [-j num] [-eiknpqrsSt]
- *      [macro[::]=val ...] [target ...]
+ * make [--posix] [-C path] [-f makefile] [-j num] [-x pragma]
+ *      [-eiknpqrsSt] [macro[::]=val ...] [target ...]
  *
  *  --posix  Enforce POSIX mode (non-POSIX)
  *  -C  Change directory to path (non-POSIX)
  *  -f  Makefile name
  *  -j  Number of jobs to run in parallel (not implemented)
+ *  -x  Pragma to make POSIX mode less strict (non-POSIX)
  *  -e  Environment variables override macros in makefiles
  *  -i  Ignore exit status
  *  -k  Continue on error
@@ -40,8 +41,9 @@ usage(void)
 		IF_FEATURE_MAKE_EXTENSIONS(" [--posix] [-C path]")
 		" [-f makefile]"
 		IF_FEATURE_MAKE_POSIX_202X(" [-j num]")
-		" [-eiknpqrsSt] "
+		IF_FEATURE_MAKE_POSIX_202X(" [-x pragma]")
 		IF_FEATURE_MAKE_EXTENSIONS("\n\t")
+		" [-eiknpqrsSt] "
 		IF_NOT_FEATURE_MAKE_POSIX_202X("[macro=val ...]")
 		IF_FEATURE_MAKE_POSIX_202X("[macro[::]=val ...]")
 		" [target ...]\n", myname);
@@ -50,7 +52,7 @@ usage(void)
 
 /*
  * Process options from an argv array.  If from_env is non-zero we're
- * handling options from MAKEFLAGS so skip '-C', '-f' and '-p'.
+ * handling options from MAKEFLAGS so skip '-C', '-f', '-p' and '-x'.
  */
 static uint32_t
 process_options(int argc, char **argv, int from_env)
@@ -129,6 +131,14 @@ process_options(int argc, char **argv, int from_env)
 			flags |= OPT_S;
 			flags &= ~OPT_k;
 			break;
+#if ENABLE_FEATURE_MAKE_EXTENSIONS
+		case 'x':	// Pragma
+			if (!from_env) {
+				set_pragma(optarg);
+				flags |= OPT_x;
+			}
+			break;
+#endif
 		default:
 			if (from_env)
 				error("invalid MAKEFLAGS");

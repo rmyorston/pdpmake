@@ -98,7 +98,7 @@ extern char **environ;
 #define OPTSTR1 "eiknqrsSt"
 #endif
 #if ENABLE_FEATURE_MAKE_EXTENSIONS
-#define OPTSTR2 "pf:C:"
+#define OPTSTR2 "pf:C:x:"
 #else
 #define OPTSTR2 "pf:"
 #endif
@@ -117,6 +117,7 @@ enum {
 	OPTBIT_p,
 	OPTBIT_f,
 	IF_FEATURE_MAKE_EXTENSIONS(OPTBIT_C,)
+	IF_FEATURE_MAKE_EXTENSIONS(OPTBIT_x,)
 	OPTBIT_precious,
 	IF_FEATURE_MAKE_POSIX_202X(OPTBIT_phony,)
 	IF_FEATURE_MAKE_POSIX_202X(OPTBIT_include,)
@@ -136,6 +137,7 @@ enum {
 	OPT_p = (1 << OPTBIT_p),
 	OPT_f = (1 << OPTBIT_f),
 	OPT_C = IF_FEATURE_MAKE_EXTENSIONS((1 << OPTBIT_C)) + 0,
+	OPT_x = IF_FEATURE_MAKE_EXTENSIONS((1 << OPTBIT_x)) + 0,
 	// The following aren't command line options and must be last
 	OPT_precious = (1 << OPTBIT_precious),
 	OPT_phony = IF_FEATURE_MAKE_POSIX_202X((1 << OPTBIT_phony)) + 0,
@@ -238,7 +240,7 @@ struct file {
 
 #define HTABSIZE 199
 
-// Constants for PRAGMA.  Order must match strings in addrule().
+// Constants for PRAGMA.  Order must match strings in set_pragma().
 #define P_MACRO_NAME			0x01
 #define P_TARGET_NAME			0x02
 #define P_COMMAND_COMMENT		0x04
@@ -293,6 +295,7 @@ void freedeps(struct depend *dp);
 struct cmd *newcmd(char *str, struct cmd *cp);
 void freecmds(struct cmd *cp);
 void freerules(struct rule *rp);
+void set_pragma(const char *name);
 void addrule(struct name *np, struct depend *dp, struct cmd *cp, int flag);
 void error(const char *msg, ...) NORETURN;
 void error_unexpected(const char *s) NORETURN;
