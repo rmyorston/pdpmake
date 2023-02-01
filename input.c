@@ -718,15 +718,31 @@ run_command(const char *cmd)
 	}
 	pclose(fd);
 
-	if (val) {
-		// Remove one newline from the end (BSD compatibility)
-		if (val[len - 1] == '\n')
-			val[len - 1] = '\0';
-		// Other newlines are changed to spaces
-		for (s = val; *s; ++s) {
-			if (*s == '\n')
-				*s = ' ';
+	if (val == NULL)
+		return val;
+
+	// Strip leading whitespace in POSIX 202X mode
+	if (!ENABLE_FEATURE_MAKE_EXTENSIONS || posix) {
+		s = val;
+		while (isspace(*s)) {
+			++s;
+			--len;
 		}
+
+		if (len == 0) {
+			free(val);
+			return NULL;
+		}
+		memmove(val, s, len + 1);
+	}
+
+	// Remove one newline from the end (BSD compatibility)
+	if (val[len - 1] == '\n')
+		val[len - 1] = '\0';
+	// Other newlines are changed to spaces
+	for (s = val; *s; ++s) {
+		if (*s == '\n')
+			*s = ' ';
 	}
 	return val;
 }
