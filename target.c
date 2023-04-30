@@ -106,18 +106,38 @@ findname(const char *name)
 }
 
 static int
-is_valid_target(const char *name)
+check_name(const char *name)
 {
 	const char *s;
+
+#if ENABLE_FEATURE_MAKE_EXTENSIONS
+	if (!posix)
+		return TRUE;
+#endif
+
 	for (s = name; *s; ++s) {
-		if (IF_FEATURE_MAKE_EXTENSIONS(posix &&)
-				((
-					IF_FEATURE_MAKE_EXTENSIONS((pragma & P_TARGET_NAME) ||)
-					(ENABLE_FEATURE_MAKE_POSIX_202X && !POSIX_2017)
-				) ? !(isfname(*s) || *s == '/') : !ispname(*s)))
+		if ((IF_FEATURE_MAKE_EXTENSIONS((pragma & P_TARGET_NAME) ||)
+				(ENABLE_FEATURE_MAKE_POSIX_202X && !POSIX_2017)
+			) ? !(isfname(*s) || *s == '/') : !ispname(*s))
 			return FALSE;
 	}
 	return TRUE;
+}
+
+static int
+is_valid_target(const char *name)
+{
+	char *archive, *member = NULL;
+	int ret;
+
+	/* Names of the form 'lib(member)' are referred to as 'expressions'
+	 * in POSIX and are subjected to special treatment.  The 'lib'
+	 * and 'member' elements must each be a valid target name. */
+	archive = splitlib(name, &member);
+	ret = check_name(archive) && (member == NULL || check_name(member));
+	free(archive);
+
+	return ret;
 }
 
 #if ENABLE_FEATURE_MAKE_EXTENSIONS
