@@ -7,14 +7,14 @@
  * Print message, with makefile and line number if possible.
  */
 static void
-vwarning(const char *msg, va_list list)
+vwarning(FILE *stream, const char *msg, va_list list)
 {
 	if (makefile)
-		fprintf(stderr, "%s: (%s:%d): ", myname, makefile, dispno);
+		fprintf(stream, "%s: (%s:%d): ", myname, makefile, dispno);
 	else
-		fprintf(stderr, "%s: ", myname);
-	vfprintf(stderr, msg, list);
-	fputc('\n', stderr);
+		fprintf(stream, "%s: ", myname);
+	vfprintf(stream, msg, list);
+	fputc('\n', stream);
 }
 
 /*
@@ -26,7 +26,7 @@ error(const char *msg, ...)
 	va_list list;
 
 	va_start(list, msg);
-	vwarning(msg, list);
+	vwarning(stderr, msg, list);
 	va_end(list);
 	exit(2);
 }
@@ -51,7 +51,7 @@ warning(const char *msg, ...)
 	va_list list;
 
 	va_start(list, msg);
-	vwarning(msg, list);
+	vwarning(stdout, msg, list);
 	va_end(list);
 }
 
