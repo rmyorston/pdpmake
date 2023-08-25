@@ -21,7 +21,7 @@ remove_target(void)
 static int
 docmds(struct name *np, struct cmd *cp)
 {
-	int estat = 0;	// 0 exit status is success
+	int estat = 0;
 	char *q, *command;
 
 	for (; cp; cp = cp->c_next) {
@@ -67,6 +67,7 @@ docmds(struct name *np, struct cmd *cp)
 			target = np;
 			status = system(cmd);
 			target = NULL;
+			estat = MAKE_DIDSOMETHING;
 			// If this command was being run to create an include file
 			// or bring it up-to-date errors should be ignored and a
 			// failure status returned.
@@ -78,7 +79,7 @@ docmds(struct name *np, struct cmd *cp)
 				if (status == SIGINT || status == SIGQUIT)
 					remove_target();
 				if (errcont || doinclude)
-					estat = 1;	// 1 exit status is failure
+					estat |= MAKE_FAILURE;
 				else
 					exit(status);
 			}
@@ -123,7 +124,7 @@ static int
 make1(struct name *np, struct cmd *cp, char *oodate, char *allsrc,
 		char *dedup, struct name *implicit)
 {
-	int estat = 0;	// 0 exit status is success
+	int estat;
 	char *name, *member = NULL, *base;
 
 	name = splitlib(np->n_name, &member);
@@ -195,8 +196,7 @@ make(struct name *np, int level)
 	char *dedup = NULL;
 #endif
 	struct timespec dtim = {1, 0};
-	bool didsomething = 0;
-	bool estat = 0;	// 0 exit status is success
+	int estat = 0;
 
 	if (np->n_flag & N_DONE)
 		return 0;
@@ -312,10 +312,10 @@ make(struct name *np, int level)
 		if ((np->n_flag & N_DOUBLE)) {
 			if (!quest && ((np->n_flag & N_PHONY) ||
 							timespec_le(&np->n_tim, &dtim))) {
-				if (estat == 0) {
-					estat = make1(np, rp->r_cmd, oodate, allsrc, dedup, locdep);
+				if (!(estat & MAKE_FAILURE)) {
+					estat |= make1(np, rp->r_cmd, oodate, allsrc,
+										dedup, locdep);
 					dtim = (struct timespec){1, 0};
-					didsomething = 1;
 				}
 				free(oodate);
 				oodate = NULL;
@@ -342,26 +342,25 @@ make(struct name *np, int level)
 
 	if (quest) {
 		if (timespec_le(&np->n_tim, &dtim)) {
-			didsomething = 1;
-			estat = 1;	// 1 means rebuild is needed
+			// MAKE_FAILURE means rebuild is needed
+			estat = MAKE_FAILURE | MAKE_DIDSOMETHING;
 		}
 	} else if (!(np->n_flag & N_DOUBLE) &&
 				((np->n_flag & N_PHONY) || (timespec_le(&np->n_tim, &dtim)))) {
-		if (estat == 0) {
+		if (!(estat & MAKE_FAILURE)) {
 			if (sc_cmd)
-				estat = make1(np, sc_cmd, oodate, allsrc, dedup, impdep);
-			else if (!doinclude)
+				estat |= make1(np, sc_cmd, oodate, allsrc, dedup, impdep);
+			else if (!doinclude && level == 0 && !(estat & MAKE_DIDSOMETHING))
 				warning("nothing to be done for %s", np->n_name);
-			didsomething = 1;
 		} else if (!doinclude) {
 			warning("'%s' not built due to errors", np->n_name);
 		}
 		free(oodate);
 	}
 
-	if (didsomething)
+	if (estat & MAKE_DIDSOMETHING)
 		clock_gettime(CLOCK_REALTIME, &np->n_tim);
-	else if (!quest && level == 0)
+	else if (!quest && level == 0 && !timespec_le(&np->n_tim, &dtim))
 		printf("%s: '%s' is up to date\n", myname, np->n_name);
 
 #if ENABLE_FEATURE_MAKE_POSIX_202X

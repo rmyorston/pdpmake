@@ -247,6 +247,10 @@ struct file {
 #define P_EMPTY_SUFFIX			0x08
 #define P_POSIX_202X			0x10
 
+// Status of make()
+#define MAKE_FAILURE		0x01
+#define MAKE_DIDSOMETHING	0x02
+
 extern const char *myname;
 extern const char *makefile;
 extern struct name *namehead[HTABSIZE];

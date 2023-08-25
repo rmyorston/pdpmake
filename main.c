@@ -518,5 +518,5 @@ main(int argc, char **argv)
 	freefiles(makefiles);
 #endif
 
-	return estat;
+	return estat & MAKE_FAILURE;
 }
