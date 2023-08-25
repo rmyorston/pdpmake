@@ -27,6 +27,13 @@ testing ".DEFAULT rule" \
 target:
 '
 
+testing ".DEFAULT rule for prerequisite" \
+	"make -f - 2>/dev/null" "source\n" "" '
+.DEFAULT:
+	@echo $@
+target: source
+'
+
 # Early versions of the code didn't properly implement skipping
 # certain macro expansions in POSIX 2017 mode.  This is a design
 # decision: other implementations may justifiably do this
