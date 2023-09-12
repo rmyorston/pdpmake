@@ -119,6 +119,14 @@ test.k:
 '
 cd .. || exit 1; rm -rf make.tempdir 2>/dev/null
 
+# There was a bug where the failure of a build command didn't result
+# in make returning a non-zero exit status.
+testing "Return error if command fails" \
+	"make -f - >/dev/null 2>&1; echo \$?" "2\n" "" '
+target:
+	@exit 42
+'
+
 # =================================================================
 # The following tests require POSIX 202X features to be enabled.
 # They may fail in POSIX 2017 mode.

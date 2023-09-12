@@ -11,7 +11,7 @@ remove_target(void)
 	if (!dryrun && !print && !precious &&
 			target && !(target->n_flag & (N_PRECIOUS | N_PHONY)) &&
 			unlink(target->n_name) == 0) {
-		warning("'%s' removed", target->n_name);
+		diagnostic("'%s' removed", target->n_name);
 	}
 }
 
@@ -66,22 +66,39 @@ docmds(struct name *np, struct cmd *cp)
 
 			target = np;
 			status = system(cmd);
-			target = NULL;
 			// If this command was being run to create an include file
 			// or bring it up-to-date errors should be ignored and a
 			// failure status returned.
 			if (status == -1 && !doinclude) {
 				error("couldn't execute '%s'", q);
 			} else if (status != 0 && !signore) {
-				if (!doinclude)
-					warning("failed to build '%s'", np->n_name);
-				if (status == SIGINT || status == SIGQUIT)
+#if ENABLE_FEATURE_MAKE_EXTENSIONS
+				if (!posix && WIFSIGNALED(status))
 					remove_target();
-				if (errcont || doinclude)
+#endif
+				if (errcont || doinclude) {
+					warning("failed to build '%s'", np->n_name);
 					estat |= MAKE_FAILURE;
-				else
-					exit(status);
+				} else {
+					const char *err_type = NULL;
+					int err_value;
+
+					if (WIFEXITED(status)) {
+						err_type = "exit";
+						err_value = WEXITSTATUS(status);
+					} else if (WIFSIGNALED(status)) {
+						err_type = "signal";
+						err_value = WTERMSIG(status);
+					}
+
+					if (err_type)
+						error("failed to build '%s' %s %d", np->n_name,
+								err_type, err_value);
+					else
+						error("failed to build '%s'", np->n_name);
+				}
 			}
+			target = NULL;
 			if (!signore)
 				free(cmd);
 		}

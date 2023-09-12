@@ -301,6 +301,7 @@ void freecmds(struct cmd *cp);
 void freerules(struct rule *rp);
 void set_pragma(const char *name);
 void addrule(struct name *np, struct depend *dp, struct cmd *cp, int flag);
+void diagnostic(const char *msg, ...);
 void error(const char *msg, ...) NORETURN;
 void error_unexpected(const char *s) NORETURN;
 void error_in_inference_rule(const char *s) NORETURN;

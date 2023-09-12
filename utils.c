@@ -18,6 +18,19 @@ vwarning(FILE *stream, const char *msg, va_list list)
 }
 
 /*
+ * Diagnostic handler.  Print message to standard error.
+ */
+void
+diagnostic(const char *msg, ...)
+{
+	va_list list;
+
+	va_start(list, msg);
+	vwarning(stderr, msg, list);
+	va_end(list);
+}
+
+/*
  * Error handler.  Print message and exit.
  */
 void
