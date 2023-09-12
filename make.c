@@ -67,7 +67,6 @@ docmds(struct name *np, struct cmd *cp)
 			target = np;
 			status = system(cmd);
 			target = NULL;
-			estat = MAKE_DIDSOMETHING;
 			// If this command was being run to create an include file
 			// or bring it up-to-date errors should be ignored and a
 			// failure status returned.
@@ -86,6 +85,8 @@ docmds(struct name *np, struct cmd *cp)
 			if (!signore)
 				free(cmd);
 		}
+		if (sdomake || dryrun || dotouch)
+			estat = MAKE_DIDSOMETHING;
 		free(command);
 	}
 	makefile = NULL;
