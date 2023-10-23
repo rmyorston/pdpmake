@@ -111,8 +111,13 @@ check_name(const char *name)
 	const char *s;
 
 #if ENABLE_FEATURE_MAKE_EXTENSIONS
-	if (!posix)
+	if (!posix) {
+		for (s = name; *s; ++s) {
+			if (*s == '=')
+				return FALSE;
+		}
 		return TRUE;
+	}
 #endif
 
 	for (s = name; *s; ++s) {
@@ -124,7 +129,7 @@ check_name(const char *name)
 	return TRUE;
 }
 
-static int
+int
 is_valid_target(const char *name)
 {
 	char *archive, *member = NULL;

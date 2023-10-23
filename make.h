@@ -315,3 +315,4 @@ char *xappendword(const char *str, const char *word);
 unsigned int getbucket(const char *name);
 struct file *newfile(char *str, struct file *fphead);
 void freefiles(struct file *fp);
+int is_valid_target(const char *name);

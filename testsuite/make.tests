@@ -127,6 +127,14 @@ target:
 	@exit 42
 '
 
+# An equal sign in a command on a target rule was detected as a
+# macro assignment.
+testing "Equal sign in inline command" \
+	"make -f -" "a = a\n" "" '
+a = a
+target:;@echo a = $(a)
+'
+
 # =================================================================
 # The following tests require POSIX 202X features to be enabled.
 # They may fail in POSIX 2017 mode.

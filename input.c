@@ -170,6 +170,34 @@ find_char(const char *str, int c)
 }
 
 /*
+ * Try to detect a target rule by searching for a colon that isn't part
+ * of a macro assignment.  Macros must have been expanded already.  Return
+ * a pointer to the colon or NULL.
+ */
+static char *
+find_colon(char *p)
+{
+	char *q;
+
+	if ((q = strchr(p, ':')) != NULL) {
+#if ENABLE_FEATURE_MAKE_EXTENSIONS || ENABLE_FEATURE_MAKE_POSIX_202X
+		// Skip ':=', '::=' and ':::=' macro assignments
+		if (
+# if ENABLE_FEATURE_MAKE_POSIX_202X
+			// '::=' and ':::=' are from POSIX 202X.
+			!(!POSIX_2017 && q[1] == ':' && q[2] == ':' && q[3] == '=') &&
+			!(!POSIX_2017 && q[1] == ':' && q[2] == '=') &&
+# endif
+			// ':=' is a non-POSIX extension
+			!(!posix && q[1] == '=')
+			)
+#endif
+			return q;
+	}
+	return NULL;
+}
+
+/*
  * Recursively expand any macros in str to an allocated string.
  */
 char *
@@ -907,7 +935,170 @@ input(FILE *fd, int ilevel)
 			goto end_loop;
 		}
 
-		// Check for a macro definition
+		// Check for target rule
+		a = p = expanded = expand_macros(str, FALSE);
+		if ((q = find_colon(p)) != NULL) {
+			// All tokens before ':' must be valid targets
+			*q = '\0';
+			while ((a = gettok(&p)) != NULL && is_valid_target(a))
+				;
+		}
+		free(expanded);
+
+		if (a == NULL) {
+			// Looks like a target rule
+			p = expanded = expand_macros(str, FALSE);
+
+			// Look for colon separator
+			q = find_colon(p);
+			if (q == NULL)
+				error("expected separator");
+
+			*q++ = '\0';	// Separate targets and prerequisites
+
+#if ENABLE_FEATURE_MAKE_EXTENSIONS
+			// Double colon
+			dbl = !posix && *q == ':';
+			if (dbl)
+				q++;
+#endif
+
+			// Look for semicolon separator
+			cp = NULL;
+			s = strchr(q, ';');
+			if (s) {
+				*s = '\0';
+				// Retrieve command from copy of line
+				if ((p = find_char(copy, ':')) && (p = strchr(p, ';')))
+					cp = newcmd(process_command(p + 1), cp);
+			}
+			semicolon_cmd = cp != NULL;
+
+			// Create list of prerequisites
+			dp = NULL;
+			while (((p = gettok(&q)) != NULL)) {
+#if !ENABLE_FEATURE_MAKE_EXTENSIONS
+# if ENABLE_FEATURE_MAKE_POSIX_202X
+				if (!POSIX_2017 && strcmp(p, ".WAIT") == 0)
+					continue;
+# endif
+				np = newname(p);
+				dp = newdep(np, dp);
+#else
+				char *newp = NULL;
+
+				if (!posix) {
+					// Allow prerequisites of form library(member1 member2).
+					// Leading and trailing spaces in the brackets are skipped.
+					if (!lib) {
+						s = strchr(p, '(');
+						if (s && !ends_with_bracket(s) && strchr(q, ')')) {
+							// Looks like an unterminated archive member
+							// with a terminator later on the line.
+							lib = p;
+							if (s[1] != '\0') {
+								p = newp = xconcat3(lib, ")", "");
+								s[1] = '\0';
+							} else {
+								continue;
+							}
+						}
+					} else if (ends_with_bracket(p)) {
+						if (*p != ')')
+							p = newp = xconcat3(lib, p, "");
+						lib = NULL;
+						if (newp == NULL)
+							continue;
+					} else {
+						p = newp = xconcat3(lib, p, ")");
+					}
+				}
+
+				// If not in POSIX mode expand wildcards in the name.
+				nfile = 1;
+				files = &p;
+				if (!posix && wildcard(p, &gd)) {
+					nfile = gd.gl_pathc;
+					files = gd.gl_pathv;
+				}
+				for (i = 0; i < nfile; ++i) {
+# if ENABLE_FEATURE_MAKE_POSIX_202X
+					if (!POSIX_2017 && strcmp(files[i], ".WAIT") == 0)
+						continue;
+# endif
+					np = newname(files[i]);
+					dp = newdep(np, dp);
+				}
+				if (files != &p)
+					globfree(&gd);
+				free(newp);
+#endif /* ENABLE_FEATURE_MAKE_EXTENSIONS */
+			}
+#if ENABLE_FEATURE_MAKE_EXTENSIONS
+			lib = NULL;
+#endif
+
+			// Create list of commands
+			startno = dispno;
+			while ((str2 = readline(fd)) && *str2 == '\t') {
+				cp = newcmd(process_command(str2), cp);
+				free(str2);
+			}
+			dispno = startno;
+
+			// Create target names and attach rule to them
+			q = expanded;
+			count = 0;
+			seen_inference = FALSE;
+			while ((p = gettok(&q)) != NULL) {
+#if ENABLE_FEATURE_MAKE_EXTENSIONS
+				// If not in POSIX mode expand wildcards in the name.
+				nfile = 1;
+				files = &p;
+				if (!posix && wildcard(p, &gd)) {
+					nfile = gd.gl_pathc;
+					files = gd.gl_pathv;
+				}
+				for (i = 0; i < nfile; ++i)
+# define p files[i]
+#endif
+				{
+					int ttype = target_type(p);
+
+					np = newname(p);
+					if (ttype != T_NORMAL) {
+						if (ttype == T_INFERENCE
+								IF_FEATURE_MAKE_EXTENSIONS(&& posix)) {
+							if (semicolon_cmd)
+								error_in_inference_rule("'; command'");
+							seen_inference = TRUE;
+						}
+						np->n_flag |= N_SPECIAL;
+					} else if (!firstname) {
+						firstname = np;
+					}
+					addrule(np, dp, cp, dbl);
+					count++;
+				}
+#if ENABLE_FEATURE_MAKE_EXTENSIONS
+# undef p
+				if (files != &p)
+					globfree(&gd);
+#endif
+			}
+			if (seen_inference && count != 1)
+				error_in_inference_rule("multiple targets");
+
+			// Prerequisites and commands will be unused if there were
+			// no targets.  Avoid leaking memory.
+			if (count == 0) {
+				freedeps(dp);
+				freecmds(cp);
+			}
+			goto end_loop;
+		}
+
+		// If we get here it must be a macro definition
 		q = find_char(str, '=');
 		if (q != NULL) {
 			int level = (useenv || fd == NULL) ? 4 : 3;
@@ -1008,158 +1199,10 @@ input(FILE *fd, int ilevel)
 #if ENABLE_FEATURE_MAKE_EXTENSIONS || ENABLE_FEATURE_MAKE_POSIX_202X
 			free(newq);
 #endif
-			goto end_loop;
+		} else {
+			error("expected macro definition");
 		}
 
-		// If we get here it must be a target rule
-		p = expanded = expand_macros(str, FALSE);
-
-		// Look for colon separator
-		q = find_char(p, ':');
-		if (q == NULL)
-			error("expected separator");
-
-		*q++ = '\0';	// Separate targets and prerequisites
-
-#if ENABLE_FEATURE_MAKE_EXTENSIONS
-		// Double colon
-		dbl = !posix && *q == ':';
-		if (dbl)
-			q++;
-#endif
-
-		// Look for semicolon separator
-		cp = NULL;
-		s = strchr(q, ';');
-		if (s) {
-			*s = '\0';
-			// Retrieve command from copy of line
-			if ((p = find_char(copy, ':')) && (p = strchr(p, ';')))
-				cp = newcmd(process_command(p + 1), cp);
-		}
-		semicolon_cmd = cp != NULL;
-
-		// Create list of prerequisites
-		dp = NULL;
-		while (((p = gettok(&q)) != NULL)) {
-#if !ENABLE_FEATURE_MAKE_EXTENSIONS
-# if ENABLE_FEATURE_MAKE_POSIX_202X
-			if (!POSIX_2017 && strcmp(p, ".WAIT") == 0)
-				continue;
-# endif
-			np = newname(p);
-			dp = newdep(np, dp);
-#else
-			char *newp = NULL;
-
-			if (!posix) {
-				// Allow prerequisites of form library(member1 member2).
-				// Leading and trailing spaces in the brackets are skipped.
-				if (!lib) {
-					s = strchr(p, '(');
-					if (s && !ends_with_bracket(s) && strchr(q, ')')) {
-						// Looks like an unterminated archive member
-						// with a terminator later on the line.
-						lib = p;
-						if (s[1] != '\0') {
-							p = newp = xconcat3(lib, ")", "");
-							s[1] = '\0';
-						} else {
-							continue;
-						}
-					}
-				} else if (ends_with_bracket(p)) {
-					if (*p != ')')
-						p = newp = xconcat3(lib, p, "");
-					lib = NULL;
-					if (newp == NULL)
-						continue;
-				} else {
-					p = newp = xconcat3(lib, p, ")");
-				}
-			}
-
-			// If not in POSIX mode expand wildcards in the name.
-			nfile = 1;
-			files = &p;
-			if (!posix && wildcard(p, &gd)) {
-				nfile = gd.gl_pathc;
-				files = gd.gl_pathv;
-			}
-			for (i = 0; i < nfile; ++i) {
-# if ENABLE_FEATURE_MAKE_POSIX_202X
-				if (!POSIX_2017 && strcmp(files[i], ".WAIT") == 0)
-					continue;
-# endif
-				np = newname(files[i]);
-				dp = newdep(np, dp);
-			}
-			if (files != &p)
-				globfree(&gd);
-			free(newp);
-#endif /* ENABLE_FEATURE_MAKE_EXTENSIONS */
-		}
-#if ENABLE_FEATURE_MAKE_EXTENSIONS
-		lib = NULL;
-#endif
-
-		// Create list of commands
-		startno = dispno;
-		while ((str2 = readline(fd)) && *str2 == '\t') {
-			cp = newcmd(process_command(str2), cp);
-			free(str2);
-		}
-		dispno = startno;
-
-		// Create target names and attach rule to them
-		q = expanded;
-		count = 0;
-		seen_inference = FALSE;
-		while ((p = gettok(&q)) != NULL) {
-#if ENABLE_FEATURE_MAKE_EXTENSIONS
-			// If not in POSIX mode expand wildcards in the name.
-			nfile = 1;
-			files = &p;
-			if (!posix && wildcard(p, &gd)) {
-				nfile = gd.gl_pathc;
-				files = gd.gl_pathv;
-			}
-			for (i = 0; i < nfile; ++i)
-# define p files[i]
-#endif
-			{
-				int ttype = target_type(p);
-
-				np = newname(p);
-				if (ttype != T_NORMAL) {
-					if (ttype == T_INFERENCE
-							IF_FEATURE_MAKE_EXTENSIONS(&& posix)) {
-						if (semicolon_cmd)
-							error_in_inference_rule("'; command'");
-						seen_inference = TRUE;
-					}
-					np->n_flag |= N_SPECIAL;
-				} else if (!firstname) {
-					firstname = np;
-				}
-				addrule(np, dp, cp, dbl);
-				count++;
-			}
-#if ENABLE_FEATURE_MAKE_EXTENSIONS
-# undef p
-			if (files != &p)
-				globfree(&gd);
-#endif
-		}
-		if (seen_inference && count != 1)
-			error_in_inference_rule("multiple targets");
-
-		// Prerequisites and commands will be unused if there were
-		// no targets.  Avoid leaking memory.
-		if (count == 0) {
-			freedeps(dp);
-			freecmds(cp);
-		}
  end_loop:
 		free(str1);
 		dispno = lineno;
