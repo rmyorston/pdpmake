@@ -1200,7 +1200,7 @@ input(FILE *fd, int ilevel)
 			free(newq);
 #endif
 		} else {
-			error("expected macro definition");
+			error("missing separator");
 		}
 
  end_loop:
