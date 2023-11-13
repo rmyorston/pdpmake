@@ -5,19 +5,34 @@
 #if defined(__sun__)
 # define __EXTENSIONS__
 #endif
+#if defined(_WIN32)
+// MinGW and MSVC
+# define _CRT_SECURE_NO_WARNINGS
+# define _CRT_NONSTDC_NO_WARNINGS
+# include <windows.h>
+#endif
+#if defined(_MSC_VER)
+// MSVC
+# include <direct.h>
+# include "getopt.h"
+# define popen _popen
+# define pclose _pclose
+#else
+// MinGW and *nix
+# include <libgen.h>
+# include <strings.h>
+# include <unistd.h>
+#endif
 #include <stdlib.h>
 #include <string.h>
-#include <strings.h>
 #include <stdio.h>
 #include <stdarg.h>
 #include <fcntl.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <unistd.h>
 #include <errno.h>
 #include <time.h>
 #include <ctype.h>
-#include <libgen.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <limits.h>
@@ -29,8 +44,9 @@ extern char **environ;
 
 // Resetting getopt(3) is hopelessly platform-dependent.  If command
 // line options don't work as expected you may need to tweak this.
-// The default should work for GNU libc and OpenBSD.
-#if defined(__FreeBSD__) || defined(__NetBSD__)
+// The default should work for GNU libc and OpenBSD.  We use NetBSD's
+// implementation for MSVC.
+#if defined(__FreeBSD__) || defined(__NetBSD__) || defined(_MSC_VER)
 # define GETOPT_RESET() do { \
 	extern int optreset; \
 	optind = 1; \
@@ -88,8 +104,10 @@ extern char **environ;
 # define ENABLE_FEATURE_CLEAN_UP 0
 #endif
 
+#ifndef _WIN32
 #define TRUE		(1)
 #define FALSE		(0)
+#endif
 #define MAX(a,b)	((a)>(b)?(a):(b))
 
 #if ENABLE_FEATURE_MAKE_POSIX_202X
@@ -316,3 +334,7 @@ unsigned int getbucket(const char *name);
 struct file *newfile(char *str, struct file *fphead);
 void freefiles(struct file *fp);
 int is_valid_target(const char *name);
+#ifdef _WIN32
+char *stpcpy(char *dest, const char *src);
+int setenv(const char *name, const char *value, int overwrite);
+#endif

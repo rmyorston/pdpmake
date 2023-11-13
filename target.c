@@ -264,7 +264,7 @@ set_pragma(const char *name)
 		"empty_suffix",
 		"posix_202x"
 	};
-	int i;
+	size_t i;
 
 	for (i = 0; i < sizeof(p_name)/sizeof(p_name[0]); ++i) {
 		if (strcmp(name, p_name[i]) == 0) {

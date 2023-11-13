@@ -3,6 +3,13 @@
  */
 #include "make.h"
 
+#ifdef _WIN32
+#define WEXITSTATUS(status)		(((status) & 0xff00) >> 8)
+#define WTERMSIG(status)		((status) & 0x7f)
+#define WIFEXITED(status)		(WTERMSIG(status) == 0)
+#define WIFSIGNALED(status)		(((signed char) (((status) & 0x7f) + 1) >> 1) > 0)
+#endif
+
 struct name *target;
 
 void
@@ -62,8 +69,11 @@ docmds(struct name *np, struct cmd *cp)
 		if (sdomake) {
 			// Get the shell to execute it
 			int status;
+#ifdef _WIN32
+			char *cmd = q;
+#else
 			char *cmd = !signore ? xconcat3("set -e;", q, "") : q;
-
+#endif
 			target = np;
 			status = system(cmd);
 			// If this command was being run to create an include file
@@ -99,8 +109,10 @@ docmds(struct name *np, struct cmd *cp)
 				}
 			}
 			target = NULL;
+#ifndef _WIN32
 			if (!signore)
 				free(cmd);
+#endif
 		}
 		if (sdomake || dryrun || dotouch)
 			estat = MAKE_DIDSOMETHING;
@@ -120,6 +132,25 @@ touch(struct name *np)
 		printf("touch %s\n", np->n_name);
 
 	if (!dryrun) {
+#ifdef _WIN32
+		HANDLE hFile = CreateFile(np->n_name, GENERIC_WRITE, 0, NULL,
+				OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+		DWORD lasterr = GetLastError();
+		BOOL rv = FALSE;
+
+		if (hFile != INVALID_HANDLE_VALUE) {
+			FILETIME ft;
+			SYSTEMTIME st;
+			GetSystemTime(&st);
+			SystemTimeToFileTime(&st, &ft);
+			rv = SetFileTime(hFile, NULL, NULL, &ft);
+			lasterr = GetLastError();
+			CloseHandle(hFile);
+		}
+
+		if (rv == FALSE)
+			warning("touch %s failed: error code %d\n", np->n_name, (int)lasterr);
+#else
 		const struct timespec timebuf[2] = {{0, UTIME_NOW}, {0, UTIME_NOW}};
 
 		if (utimensat(AT_FDCWD, np->n_name, timebuf, 0) < 0) {
@@ -132,6 +163,7 @@ touch(struct name *np)
 			}
 			warning("touch %s failed: %s\n", np->n_name, strerror(errno));
 		}
+#endif
 	}
 }
 
@@ -376,9 +408,24 @@ make(struct name *np, int level)
 		free(oodate);
 	}
 
-	if (estat & MAKE_DIDSOMETHING)
+	if (estat & MAKE_DIDSOMETHING) {
+#ifdef _MSC_VER
+		// This piece of code was taken from MinGW64's implementation
+		// of clock_gettime() found in clock.c (placed in the Public Domain)
+		union {
+			unsigned __int64 u64;
+			FILETIME ft;
+		} ct;
+		const unsigned __int64 DELTA_EPOCH_IN_100NS = 116444736000000000LL;
+		const unsigned __int64 POW10_7 = 10000000;
+		GetSystemTimeAsFileTime(&ct.ft);
+		unsigned __int64 t = ct.u64 - DELTA_EPOCH_IN_100NS;
+		np->n_tim.tv_sec = t / POW10_7;
+		np->n_tim.tv_nsec = ((int) (t % POW10_7)) * 100;
+#else
 		clock_gettime(CLOCK_REALTIME, &np->n_tim);
-	else if (!quest && level == 0 && !timespec_le(&np->n_tim, &dtim))
+#endif
+	} else if (!quest && level == 0 && !timespec_le(&np->n_tim, &dtim))
 		printf("%s: '%s' is up to date\n", myname, np->n_name);
 
 #if ENABLE_FEATURE_MAKE_POSIX_202X

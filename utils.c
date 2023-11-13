@@ -105,10 +105,19 @@ xstrdup(const char *s)
 char *
 xstrndup(const char *s, size_t n)
 {
+#ifdef _WIN32
+	char *t = xmalloc(n + 1);
+	if (t == NULL)
+		error("out of memory");
+	strncpy(t, s, n);
+	t[n] = '\0';
+	return t;
+#else
 	char *t = strndup(s, n);
 	if (t == NULL)
 		error("out of memory");
 	return t;
+#endif
 }
 
 /*
@@ -171,5 +180,30 @@ freefiles(struct file *fp)
 		free(fp->f_name);
 		free(fp);
 	}
+}
+#endif
+
+#ifdef _WIN32
+char *
+stpcpy(char *dest, const char *src)
+{
+	strcpy(dest, src);
+	size_t len = strlen(src);
+	dest[len] = '\0';
+	return (dest + len);
+}
+
+int
+setenv(const char *name, const char *value, int overwrite)
+{
+	if (getenv(name) && overwrite == 0)
+		return 0;
+
+	size_t buflen = strlen(name) + strlen(value) + 2;
+	char *buf = xmalloc(buflen + 1);
+	snprintf(buf, buflen, "%s=%s", name, value);
+	int rv = _putenv(buf);
+	free(buf);
+	return rv;
 }
 #endif

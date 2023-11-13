@@ -22,4 +22,4 @@ test: make
 	@cd testsuite && ./runtest
 
 clean:
-	rm -f $(OBJS) make
+	rm -f $(OBJS) make make.exe

@@ -325,6 +325,7 @@ update_makeflags(void)
 	}
 }
 
+#ifndef _WIN32
 static void
 make_handler(int sig)
 {
@@ -346,6 +347,7 @@ init_signal(int sig)
 	if (sa.sa_handler != SIG_IGN)
 		sigaction(sig, &new_action, NULL);
 }
+#endif
 
 /*
  * If the global option flag associated with a special target hasn't
@@ -390,7 +392,13 @@ main(int argc, char **argv)
 		return EXIT_FAILURE;
 	}
 
+#ifdef _MSC_VER
+	char *p = strrchr(*argv, '\\');
+	myname = p ? (p+1) : *argv;
+#else
 	myname = basename(*argv);
+#endif
+
 #if ENABLE_FEATURE_MAKE_EXTENSIONS
 	if (argv[1] && strcmp(argv[1], "--posix") == 0) {
 		argv[1] = argv[0];
@@ -406,6 +414,8 @@ main(int argc, char **argv)
 #if ENABLE_FEATURE_MAKE_POSIX_202X
 	if (!POSIX_2017) {
 		path = argv[0];
+		// argv[0] is always an absolute path on Windows
+#ifndef _WIN32
 		if (argv[0][0] != '/' && strchr(argv[0], '/')) {
 			// Make relative path absolute
 			path = newpath = realpath(argv[0], NULL);
@@ -413,6 +423,7 @@ main(int argc, char **argv)
 				error("can't resolve path for %s: %s", argv[0], strerror(errno));
 			}
 		}
+#endif
 	} else {
 		path = "make";
 	}
@@ -431,8 +442,10 @@ main(int argc, char **argv)
 	opts |= process_options(argc, argv, FALSE);
 	argv += optind;
 
+#ifndef _WIN32
 	init_signal(SIGHUP);
 	init_signal(SIGTERM);
+#endif
 
 	setmacro("$", "$", 0 | M_VALID);
 
@@ -455,7 +468,15 @@ main(int argc, char **argv)
 	// Read built-in rules
 	input(NULL, 0);
 
+#ifdef _WIN32
+	const char *comspec = getenv("COMSPEC");
+	if (!comspec)
+		comspec = "C:\\Windows\\system32\\cmd.exe";
+	setmacro("COMSPEC", comspec, 4);
+	setmacro("SHELL", comspec, 4);
+#else
 	setmacro("SHELL", "/bin/sh", 4);
+#endif
 	setmacro("MAKE", path, 4);
 #if ENABLE_FEATURE_MAKE_POSIX_202X
 	free((void *)newpath);

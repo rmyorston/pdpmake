@@ -2,7 +2,15 @@
  * Parse a makefile
  */
 #include "make.h"
-#include <glob.h>
+
+#ifdef _WIN32
+typedef struct {
+	size_t gl_pathc;
+	char **gl_pathv;
+} glob_t;
+#else
+# include <glob.h>
+#endif
 
 int lineno;	// Physical line number in file
 int dispno;	// Line number for display purposes
@@ -606,6 +614,7 @@ target_type(char *s)
 {
 	char *sfx;
 	int ret;
+	size_t i;
 	static const char *s_name[] = {
 		".DEFAULT",
 		".POSIX",
@@ -627,8 +636,8 @@ target_type(char *s)
 		return T_NORMAL;
 
 	// Check for one of the known special targets
-	for (ret = 0; ret < sizeof(s_name)/sizeof(s_name[0]); ret++)
-		if (strcmp(s_name[ret], s) == 0)
+	for (i = 0; i < sizeof(s_name)/sizeof(s_name[0]); i++)
+		if (strcmp(s_name[i], s) == 0)
 			return T_SPECIAL;
 
 	// Check for an inference rule
@@ -777,10 +786,27 @@ run_command(const char *cmd)
 #endif
 
 #if ENABLE_FEATURE_MAKE_EXTENSIONS
+#ifdef _WIN32
+static void
+globfree(glob_t *gd)
+{
+	if (gd->gl_pathv) {
+		for (size_t i = 0; i < gd->gl_pathc; ++i) {
+			if (gd->gl_pathv[i])
+				free(gd->gl_pathv[i]);
+		}
+		free(gd->gl_pathv);
+	}
+	memset(gd, 0, sizeof(*gd));
+}
+#endif
+
 /*
  * Check for an unescaped wildcard character
  */
-static int wildchar(const char *p)
+#ifndef _WIN32
+static int
+wildchar(const char *p)
 {
 	while (*p) {
 		switch (*p) {
@@ -797,6 +823,33 @@ static int wildchar(const char *p)
 	}
 	return 0;
 }
+#endif
+
+/*
+ * Return copy of directory component (including separator)
+ * or NULL.
+ */
+#ifdef _WIN32
+static char *
+xdirname(char *path)
+{
+	char *s = NULL;
+	char *p1 = strrchr(path, '/');
+	char *p2 = strrchr(path, '\\');
+	if (!p1) p1 = path;
+	if (!p2) p2 = path;
+
+	char *p = MAX(p1, p2);
+	if (p != path) {
+		++p;
+		char c = *p;
+		*p = '\0';
+		s = xstrdup(path);
+		*p = c;
+	}
+	return s;
+}
+#endif
 
 /*
  * Expand any wildcards in a pattern.  Return TRUE if a match is
@@ -806,6 +859,35 @@ static int wildchar(const char *p)
 static int
 wildcard(char *p, glob_t *gd)
 {
+#ifdef _WIN32
+	// Check if there are any wildcards.
+	if (!strchr(p, '?') && !strchr(p, '*'))
+		return 0;
+
+	// Use FindFirstFile() / FindNextFile() for globbing
+	WIN32_FIND_DATA FindFileData;
+	HANDLE hFind = FindFirstFile(p, &FindFileData);
+	if (hFind == INVALID_HANDLE_VALUE) {
+		if (GetLastError() == ERROR_FILE_NOT_FOUND)
+			return FALSE;
+
+		error("glob error for '%s'", p);
+	}
+
+	char *dname = xdirname(p);
+	memset(gd, 0, sizeof(*gd));
+	do {
+		gd->gl_pathc++;
+		gd->gl_pathv = realloc(gd->gl_pathv, sizeof(char*) * gd->gl_pathc);
+		gd->gl_pathv[gd->gl_pathc-1] = dname
+			? xconcat3(dname, FindFileData.cFileName, "")
+			: xstrdup(FindFileData.cFileName);
+	}
+	while (FindNextFile(hFind, &FindFileData));
+
+	FindClose(hFind);
+	if (dname) free(dname);
+#else
 	int ret;
 	char *s;
 
@@ -819,7 +901,7 @@ wildcard(char *p, glob_t *gd)
 			*s++ = *p;
 		}
 		*s = '\0';
-		return 0;
+		return FALSE;
 	}
 
 	memset(gd, 0, sizeof(*gd));
@@ -830,7 +912,8 @@ wildcard(char *p, glob_t *gd)
 	} else if (ret != 0) {
 		error("glob error for '%s'", p);
 	}
-	return 1;
+#endif
+	return TRUE;
 }
 #endif
 

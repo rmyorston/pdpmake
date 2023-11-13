@@ -2,7 +2,22 @@
  * Get modification time of file or archive member
  */
 #include "make.h"
-#include <ar.h>
+
+#ifdef _WIN32
+# define ARMAG	"!<arch>\n"
+# define ARFMAG	"`\n"
+# define SARMAG	8
+struct ar_hdr {
+	char ar_name[16];
+	char ar_date[12];
+	char ar_uid[6], ar_gid[6];
+	char ar_mode[8];
+	char ar_size[10];
+	char ar_fmag[2];
+};
+#else
+# include <ar.h>
+#endif
 
 /*
  * Read a number from an archive header.
@@ -165,8 +180,13 @@ modtime(struct name *np)
 		np->n_tim.tv_sec = 0;
 		np->n_tim.tv_nsec = 0;
 	} else {
+#ifdef _WIN32
+		np->n_tim.tv_sec = info.st_mtime;
+		np->n_tim.tv_nsec = 0;
+#else
 		np->n_tim.tv_sec = info.st_mtim.tv_sec;
 		np->n_tim.tv_nsec = info.st_mtim.tv_nsec;
+#endif
 	}
 	free(name);
 }

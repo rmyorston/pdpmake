@@ -2,11 +2,15 @@
 
 This is an implementation of [POSIX make](https://pubs.opengroup.org/onlinepubs/9699919799/utilities/make.html).
 
-It should build on most modernish Unix-style systems:
+It should build on most modernish systems:
 
  - It comes with its own makefile, naturally, but if you don't have a `make` binary already the command `cc -o make *.c` should get you started.
 
  - Command line options may not work properly due to differences in how `getopt(3)` is reset.  Adjust `GETOPT_RESET()` in make.h for your platform, if necessary.
+
+ - For MinGW you may have to link against `-lpthread` since that is where `clock_gettime(2)` is located on that target.
+
+ - Use the following command to build with MSVC's compiler: `cl -Imsvc msvc/*.c *.c -link -out:make.exe`
 
 The default configuration enables extensions:  some from a future POSIX
 standard and some that are non-POSIX.  Generally these extensions are
