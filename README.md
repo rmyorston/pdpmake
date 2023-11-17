@@ -8,6 +8,12 @@ It should build on most modernish Unix-style systems:
 
  - Command line options may not work properly due to differences in how `getopt(3)` is reset.  Adjust `GETOPT_RESET()` in make.h for your platform, if necessary.
 
+Microsoft Windows users will find `pdpmake` included in the
+[BusyBox for Windows](https://frippery.org/busybox/index.html) binaries.
+Download an appropriate binary for your system and rename it `make.exe` or
+`pdpmake.exe`. BusyBox for Windows includes a Unix shell and many utilities.
+These can be used in Makefiles without any further setup.
+
 The default configuration enables extensions:  some from a future POSIX
 standard and some that are non-POSIX.  Generally these extensions are
 compatible with GNU make:
