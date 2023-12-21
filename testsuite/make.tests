@@ -135,6 +135,20 @@ a = a
 target:;@echo a = $(a)
 '
 
+# When a build command fails and the '-k' option has been provided
+# (continue execution on error) no further commands should be executed
+# for the current target.
+testing "Failure of build command with -k" \
+	"make -k -f - 2>/dev/null" "OK\n" "" '
+all: bar baz
+bar:
+	@echo OK
+	@false
+	@echo Not reached
+baz:
+	@:
+'
+
 # =================================================================
 # The following tests require POSIX 202X features to be enabled.
 # They may fail in POSIX 2017 mode.
