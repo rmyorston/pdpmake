@@ -505,6 +505,15 @@ target:
 	: hash $(hash) hash
 '
 
+# A '#' character can be escaped with a backslash
+testing "Backslash-escaped hash isn't a comment" \
+	"make -f -" \
+	": hash # hash\n" "" '
+hash = \#
+target:
+	: hash $(hash) hash
+'
+
 # A '#' character in a command line doesn't start a comment
 testing "Hash in command line isn't a comment" \
 	"make -f -" \
