@@ -64,10 +64,13 @@ docmds(struct name *np, struct cmd *cp)
 		if (sdomake) {
 			// Get the shell to execute it
 			int status;
-			char *cmd = !signore ? xconcat3("set -e;", q, "") : q;
+			char *cmd = !signore IF_FEATURE_MAKE_EXTENSIONS(&& posix) ?
+							xconcat3("set -e;", q, "") : q;
 
 			target = np;
 			status = system(cmd);
+			if (!signore IF_FEATURE_MAKE_EXTENSIONS(&& posix))
+				free(cmd);
 			// If this command was being run to create an include file
 			// or bring it up-to-date errors should be ignored and a
 			// failure status returned.
@@ -82,7 +85,6 @@ docmds(struct name *np, struct cmd *cp)
 					diagnostic("failed to build '%s'", np->n_name);
 					estat |= MAKE_FAILURE;
 					free(command);
-					free(cmd);
 					break;
 				} else if (doinclude) {
 					warning("failed to build '%s'", np->n_name);
@@ -106,8 +108,6 @@ docmds(struct name *np, struct cmd *cp)
 				}
 			}
 			target = NULL;
-			if (!signore)
-				free(cmd);
 		}
 		if (sdomake || dryrun || dotouch)
 			estat = MAKE_DIDSOMETHING;
