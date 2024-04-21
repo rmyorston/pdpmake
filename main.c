@@ -220,18 +220,29 @@ expand_makeflags(int *fargc)
 /*
  * Instantiate all macros in an argv-style array of pointers.  Stop
  * processing at the first string that doesn't contain an equal sign.
+ * As an extension, target arguments on the command line (level 1)
+ * are skipped and will be processed later.
  */
 static char **
 process_macros(char **argv, int level)
 {
 	char *p;
 
-	while (*argv && (p = strchr(*argv, '=')) != NULL) {
-#if !ENABLE_FEATURE_MAKE_POSIX_202X
-		const int immediate = 0;
-#else
-		int immediate = 0;
+	for (; *argv; argv++) {
+		IF_NOT_FEATURE_MAKE_POSIX_202X(const) int immediate = 0;
 
+		if (!(p = strchr(*argv, '='))) {
+#if ENABLE_FEATURE_MAKE_EXTENSIONS
+			// Skip targets on the command line
+			if (!posix && level == 1)
+				continue;
+			else
+#endif
+				// Stop at first target
+				break;
+		}
+
+#if ENABLE_FEATURE_MAKE_POSIX_202X
 		if (p - 2 > *argv && p[-1] == ':' && p[-2] == ':') {
 			if (POSIX_2017)
 				error("invalid macro assignment");
@@ -253,8 +264,6 @@ process_macros(char **argv, int level)
 		*p = '=';
 		if (immediate)
 			p[-2] = ':';
-
-		argv++;
 	}
 	return argv;
 }
@@ -383,6 +392,7 @@ main(int argc, char **argv)
 #endif
 	char **fargv, **fargv0;
 	int fargc, estat;
+	bool found_target;
 	FILE *ifd;
 	struct file *fp;
 
@@ -437,7 +447,12 @@ main(int argc, char **argv)
 	setmacro("$", "$", 0 | M_VALID);
 
 	// Process macro definitions from the command line
-	argv = process_macros(argv, 1);
+	if (!ENABLE_FEATURE_MAKE_EXTENSIONS || posix)
+		// In POSIX mode macros must appear before targets.
+		// argv should now point to targets only.
+		argv = process_macros(argv, 1);
+	else
+		process_macros(argv, 1);
 
 	// Process macro definitions from MAKEFLAGS
 	if (fargv) {
@@ -500,13 +515,22 @@ main(int argc, char **argv)
 #endif
 
 	estat = 0;
-	if (*argv == NULL) {
+	found_target = FALSE;
+	for (; *argv; argv++) {
+#if ENABLE_FEATURE_MAKE_EXTENSIONS
+		// In POSIX mode only targets should now be in argv.
+		// As an extension macros may still be present: skip them.
+		if (posix || !strchr(*argv, '='))
+#endif
+		{
+			found_target = TRUE;
+			estat |= make(newname(*argv), 0);
+		}
+	}
+	if (!found_target) {
 		if (!firstname)
 			error("no targets defined");
 		estat = make(firstname, 0);
-	} else {
-		while (*argv != NULL)
-			estat |= make(newname(*argv++), 0);
 	}
 
 #if ENABLE_FEATURE_CLEAN_UP
