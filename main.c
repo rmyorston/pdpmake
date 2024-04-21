@@ -447,7 +447,7 @@ main(int argc, char **argv)
 	}
 
 	// Process macro definitions from the environment
-	process_macros(environ, 3 | M_VALID);
+	process_macros(environ, 3);
 
 	// Update MAKEFLAGS and environment
 	update_makeflags();

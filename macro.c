@@ -78,7 +78,10 @@ setmacro(const char *name, const char *val, int level)
 		// If not defined, allocate space for new
 		unsigned int bucket;
 
-		if (!valid && !is_valid_macro(name))
+		if (!valid && !is_valid_macro(name)) {
+			// Silently drop invalid names from the environment
+			if (level == 3)
+				return;
 #if ENABLE_FEATURE_MAKE_EXTENSIONS
 			error("invalid macro name '%s'%s", name,
 					potentially_valid_macro(name) ?
@@ -86,6 +89,7 @@ setmacro(const char *name, const char *val, int level)
 #else
 			error("invalid macro name '%s'", name);
 #endif
+		}
 
 		bucket = getbucket(name);
 		mp = xmalloc(sizeof(struct macro));
