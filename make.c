@@ -383,9 +383,11 @@ make(struct name *np, int level)
 		free(oodate);
 	}
 
-	if (estat & MAKE_DIDSOMETHING)
-		clock_gettime(CLOCK_REALTIME, &np->n_tim);
-	else if (!quest && level == 0 && !timespec_le(&np->n_tim, &dtim))
+	if (estat & MAKE_DIDSOMETHING) {
+		modtime(np);
+		if (!np->n_tim.tv_sec)
+			clock_gettime(CLOCK_REALTIME, &np->n_tim);
+	} else if (!quest && level == 0 && !timespec_le(&np->n_tim, &dtim))
 		printf("%s: '%s' is up to date\n", myname, np->n_name);
 
 #if ENABLE_FEATURE_MAKE_POSIX_202X
