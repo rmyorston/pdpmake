@@ -150,7 +150,7 @@ make1(struct name *np, struct cmd *cp, char *oodate, char *allsrc,
 		char *dedup, struct name *implicit)
 {
 	int estat;
-	char *name, *member = NULL, *base;
+	char *name, *member = NULL, *base = NULL, *prereq = NULL;
 
 	name = splitlib(np->n_name, &member);
 	setmacro("?", oodate, 0 | M_VALID);
@@ -163,11 +163,12 @@ make1(struct name *np, struct cmd *cp, char *oodate, char *allsrc,
 	setmacro("%", member, 0 | M_VALID);
 	setmacro("@", name, 0 | M_VALID);
 	if (implicit) {
-		setmacro("<", implicit->n_name, 0 | M_VALID);
+		prereq = implicit->n_name;
 		base = member ? member : name;
 		*suffix(base) = '\0';
-		setmacro("*", base, 0 | M_VALID);
 	}
+	setmacro("<", prereq, 0 | M_VALID);
+	setmacro("*", base, 0 | M_VALID);
 	free(name);
 
 	estat = docmds(np, cp);
