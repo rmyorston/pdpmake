@@ -250,9 +250,19 @@ process_macros(char **argv, int level)
 			p[-2] = '\0';
 		} else
 #endif
-		*p = '\0';
-		if (level != 3 || (strcmp(*argv, "MAKEFLAGS") != 0 &&
-					strcmp(*argv, "SHELL") != 0)) {
+			*p = '\0';
+
+		/* We want to process _most_ macro assignments.
+		 * There are exceptions for particular values from the
+		 * environment (level 3). */
+		if (!(level == 3 &&
+				(strcmp(*argv, "MAKEFLAGS") == 0
+					|| strcmp(*argv, "SHELL") == 0
+#if ENABLE_FEATURE_MAKE_POSIX_202X
+					|| (strcmp(*argv, "CURDIR") == 0 && !useenv && !POSIX_2017)
+#endif
+
+				))) {
 			if (immediate) {
 				char *exp = expand_macros(p + 1, FALSE);
 				setmacro(*argv, exp, level | immediate);
@@ -261,6 +271,7 @@ process_macros(char **argv, int level)
 				setmacro(*argv, p + 1, level);
 			}
 		}
+
 		*p = '=';
 		if (immediate)
 			p[-2] = ':';
@@ -473,6 +484,26 @@ main(int argc, char **argv)
 	setmacro("SHELL", "/bin/sh", 4);
 	setmacro("MAKE", path, 4);
 #if ENABLE_FEATURE_MAKE_POSIX_202X
+	if (!POSIX_2017) {
+		char *cwd = NULL;
+		size_t len = 0;
+
+		do {
+			len += 256;
+			cwd = xrealloc(cwd, len);
+			if (getcwd(cwd, len)) {
+				if (!useenv) {
+					// Export cwd to environment, if necessary
+					char *envcwd = getenv("CURDIR");
+					if (envcwd && strcmp(cwd, envcwd) != 0)
+						setenv("CURDIR", cwd, 1);
+				}
+				setmacro("CURDIR", cwd, 4);
+				break;
+			}
+		} while (errno == ERANGE);
+		free(cwd);
+	}
 	free((void *)newpath);
 #endif
 
