@@ -583,7 +583,7 @@ readline(FILE *fd)
 /*
  * Return TRUE if the argument is a known suffix.
  */
-static int
+int
 is_suffix(const char *s)
 {
 	struct name *np;

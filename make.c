@@ -162,10 +162,34 @@ make1(struct name *np, struct cmd *cp, char *oodate, char *allsrc,
 #endif
 	setmacro("%", member, 0 | M_VALID);
 	setmacro("@", name, 0 | M_VALID);
-	if (implicit) {
-		prereq = implicit->n_name;
+	if (implicit IF_FEATURE_MAKE_EXTENSIONS(|| !posix)) {
+#if ENABLE_FEATURE_MAKE_EXTENSIONS
+		char *s;
+
+		// As an extension, if we're not dealing with an implicit
+		// rule set $< to the first out-of-date prerequisite.
+		if (implicit == NULL) {
+			if (oodate) {
+				s = strchr(oodate, ' ');
+				if (s)
+					*s = '\0';
+				prereq = oodate;
+			}
+		} else
+#endif
+			prereq = implicit->n_name;
+
 		base = member ? member : name;
-		*suffix(base) = '\0';
+		s = suffix(base);
+#if ENABLE_FEATURE_MAKE_EXTENSIONS
+		// As an extension, if we're not dealing with an implicit
+		// rule and the target ends with a known suffix, remove it
+		// and set $* to the stem, else to an empty string.
+		if (implicit == NULL && !is_suffix(s))
+			base = NULL;
+		else
+#endif
+			*s = '\0';
 	}
 	setmacro("<", prereq, 0 | M_VALID);
 	setmacro("*", base, 0 | M_VALID);
