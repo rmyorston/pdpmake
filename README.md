@@ -30,7 +30,7 @@ compatible with GNU make:
  - `$(SRC:%.c=%.o)` pattern macro expansions
  - special handling of `MAKE` macro
  - `$^` and `$+` internal macros
- - the `$&lt;` and `$*` internal macros are valid for target rules
+ - the `$<` and `$*` internal macros are valid for target rules
  - skip duplicate entries in `$?`
  - `.PHONY` special target
  - `-C directory` and `-j maxjobs` command line options
