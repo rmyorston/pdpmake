@@ -163,9 +163,9 @@ make1(struct name *np, struct cmd *cp, char *oodate, char *allsrc,
 	setmacro("%", member, 0 | M_VALID);
 	setmacro("@", name, 0 | M_VALID);
 	if (implicit IF_FEATURE_MAKE_EXTENSIONS(|| !posix)) {
-#if ENABLE_FEATURE_MAKE_EXTENSIONS
 		char *s;
 
+#if ENABLE_FEATURE_MAKE_EXTENSIONS
 		// As an extension, if we're not dealing with an implicit
 		// rule set $< to the first out-of-date prerequisite.
 		if (implicit == NULL) {
