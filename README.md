@@ -21,7 +21,7 @@ compatible with GNU make:
  - double-colon rules
  - `-include` to ignore missing include files
  - include files are created if required
- - `ifdef`/`ifndef`/`else`/`endif` conditionals
+ - `ifdef`/`ifndef`/`ifeq`/`ifneq`/`else`/`endif` conditionals
  - `lib.a(mem1.o mem2.o...)` syntax for archive members
  - `:=`/`::=`/`:::=`/`+=`/`?=`/`!=` macro assignments
  - macro expansions can be nested
@@ -30,10 +30,14 @@ compatible with GNU make:
  - `$(SRC:%.c=%.o)` pattern macro expansions
  - special handling of `MAKE` macro
  - `$^` and `$+` internal macros
+ - the `$&lt;` and `$*` internal macros are valid for target rules
  - skip duplicate entries in `$?`
  - `.PHONY` special target
  - `-C directory` and `-j maxjobs` command line options
- - `#` doesn't start a comment in macro expansions or command lines
+ - `#` doesn't start a comment in macro expansions or build commands
+ - `#` may be escaped with a backslash
+ - macro definitions and targets can be mixed on the command line
+ - the `CURDIR` macro is set to the current directory on start up
 
 When extensions are enabled adding the `.POSIX` target to your makefile
 will disable them.  Other versions of make tend to allow extensions even
