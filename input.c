@@ -744,9 +744,7 @@ process_command(char *s)
 #endif
 
 #if ENABLE_FEATURE_MAKE_EXTENSIONS
-	if (!ENABLE_FEATURE_MAKE_EXTENSIONS ||
-			(IF_FEATURE_MAKE_EXTENSIONS(!(pragma & P_COMMAND_COMMENT) &&)
-				posix)) {
+	if (!(pragma & P_COMMAND_COMMENT) && posix) {
 		// POSIX strips comments from command lines
 		t = strchr(s, '#');
 		if (t) {
