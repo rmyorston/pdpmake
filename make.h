@@ -5,24 +5,25 @@
 #if defined(__sun__)
 # define __EXTENSIONS__
 #endif
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+
+#include <ctype.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <libgen.h>
+#include <limits.h>
+#include <signal.h>
+#include <stdarg.h>
+#include <stdbool.h>
+#include <stdint.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <strings.h>
-#include <stdio.h>
-#include <stdarg.h>
-#include <fcntl.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <sys/wait.h>
-#include <unistd.h>
-#include <errno.h>
 #include <time.h>
-#include <ctype.h>
-#include <libgen.h>
-#include <stdbool.h>
-#include <stdint.h>
-#include <limits.h>
-#include <signal.h>
+#include <unistd.h>
 
 extern char **environ;
 
