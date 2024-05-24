@@ -409,10 +409,10 @@ testing "Replace escaped NL in macro in command with space" \
 	"make -f -" \
 	"a b a b\n" "" '
 M=word
-N=${M:word=a\
+N=${M:word=a\\
 b}
 target:
-	@echo ${N} ${M:word=a\
+	@echo ${N} ${M:word=a\\
 b}
 '
 
@@ -421,7 +421,7 @@ testing "CURDIR macro" \
 	"make -f -" \
 	"OK\n" "" '
 target:
-	@test "$(CURDIR)" = "$$(pwd)" && echo OK
+	@test "$(CURDIR)" = "$$(pwd -P)" && echo OK
 '
 # The CURDIR environment variable doesn't affect the macro
 export CURDIR=/you/are/here
@@ -534,7 +534,7 @@ target:
 testing "Backslash-escaped hash isn't a comment" \
 	"make -f -" \
 	": hash # hash\n" "" '
-hash = \#
+hash = \\#
 target:
 	: hash $(hash) hash
 '
