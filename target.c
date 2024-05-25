@@ -257,18 +257,31 @@ void
 set_pragma(const char *name)
 {
 	// Order must match constants in make.h
+	// POSIX levels must be last and in increasing order
 	static const char *p_name[] = {
 		"macro_name",
 		"target_name",
 		"command_comment",
 		"empty_suffix",
+		"posix_2017",
 		"posix_202x"
 	};
 	int i;
 
 	for (i = 0; i < sizeof(p_name)/sizeof(p_name[0]); ++i) {
 		if (strcmp(name, p_name[i]) == 0) {
-			pragma |= 1 << i;
+#if !ENABLE_FEATURE_MAKE_POSIX_202X
+			if (i == BIT_POSIX_202X) {
+				break;
+			}
+#endif
+			if (i >= BIT_POSIX_2017) {
+				// POSIX level is stored in a separate variable.
+				// No bits in 'pragma' are used.
+				posix_level = i - BIT_POSIX_2017;
+			} else {
+				pragma |= 1 << i;
+			}
 			return;
 		}
 	}

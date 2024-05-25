@@ -31,6 +31,7 @@ char *numjobs = NULL;
 #endif
 #if ENABLE_FEATURE_MAKE_EXTENSIONS
 unsigned char pragma = 0;
+unsigned char posix_level = DEFAULT_POSIX_LEVEL;
 #endif
 
 static void

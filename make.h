@@ -44,6 +44,10 @@ extern char **environ;
 # define GETOPT_RESET() (optind = 0)
 #endif
 
+// Supported POSIX levels
+#define STD_POSIX_2017 0
+#define STD_POSIX_202X 1
+
 // If ENABLE_FEATURE_MAKE_EXTENSIONS is non-zero some non-POSIX extensions
 // are enabled.
 //
@@ -51,29 +55,25 @@ extern char **environ;
 # define ENABLE_FEATURE_MAKE_EXTENSIONS 1
 #endif
 
+#define POSIX_2017 (posix && posix_level == STD_POSIX_2017)
+
+#ifndef DEFAULT_POSIX_LEVEL
+# define DEFAULT_POSIX_LEVEL STD_POSIX_2017
+#endif
+
 #if ENABLE_FEATURE_MAKE_EXTENSIONS
 # define IF_FEATURE_MAKE_EXTENSIONS(...) __VA_ARGS__
 # define IF_NOT_FEATURE_MAKE_EXTENSIONS(...)
-# define POSIX_2017 (posix && !(pragma & P_POSIX_202X))
 #else
 # define IF_FEATURE_MAKE_EXTENSIONS(...)
 # define IF_NOT_FEATURE_MAKE_EXTENSIONS(...) __VA_ARGS__
-# define POSIX_2017 posix
+# define posix_level DEFAULT_POSIX_LEVEL
 #endif
 
 // IF ENABLE_FEATURE_MAKE_POSIX_202X is non-zero POSIX 202X features
 // are enabled.
-//
-// If ENABLE_FEATURE_MAKE_POSIX_202X and ENABLE_FEATURE_MAKE_EXTENSIONS
-// are both explicitly set non-zero the POSIX mode enforced by .POSIX,
-// PDPMAKE_POSIXLY_CORRECT or --posix is POSIX 202X.  In all other cases
-// the mode enforced by runtime settings is POSIX 2017.
-//
 #ifndef ENABLE_FEATURE_MAKE_POSIX_202X
 # define ENABLE_FEATURE_MAKE_POSIX_202X ENABLE_FEATURE_MAKE_EXTENSIONS
-#elif ENABLE_FEATURE_MAKE_POSIX_202X && ENABLE_FEATURE_MAKE_EXTENSIONS
-# undef POSIX_2017
-# define POSIX_2017 0
 #endif
 
 #if ENABLE_FEATURE_MAKE_POSIX_202X
@@ -243,11 +243,19 @@ struct file {
 #define HTABSIZE 199
 
 // Constants for PRAGMA.  Order must match strings in set_pragma().
-#define P_MACRO_NAME			0x01
-#define P_TARGET_NAME			0x02
-#define P_COMMAND_COMMENT		0x04
-#define P_EMPTY_SUFFIX			0x08
-#define P_POSIX_202X			0x10
+enum {
+	BIT_MACRO_NAME = 0,
+	BIT_TARGET_NAME,
+	BIT_COMMAND_COMMENT,
+	BIT_EMPTY_SUFFIX,
+	BIT_POSIX_2017,
+	BIT_POSIX_202X,
+
+	P_MACRO_NAME = (1 << BIT_MACRO_NAME),
+	P_TARGET_NAME = (1 << BIT_TARGET_NAME),
+	P_COMMAND_COMMENT = (1 << BIT_COMMAND_COMMENT),
+	P_EMPTY_SUFFIX = (1 << BIT_EMPTY_SUFFIX)
+};
 
 // Status of make()
 #define MAKE_FAILURE		0x01
@@ -269,6 +277,7 @@ extern char *numjobs;
 #endif
 #if ENABLE_FEATURE_MAKE_EXTENSIONS
 extern unsigned char pragma;
+extern unsigned char posix_level;
 #endif
 
 // Return TRUE if c is allowed in a POSIX 2017 macro or target name
