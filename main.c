@@ -48,6 +48,20 @@ usage(void)
 		IF_NOT_FEATURE_MAKE_POSIX_202X("[macro=val ...]")
 		IF_FEATURE_MAKE_POSIX_202X("[macro[::]=val ...]")
 		" [target ...]\n", myname);
+
+	fprintf(stderr, "\nThis build supports:"
+			IF_FEATURE_MAKE_EXTENSIONS(" non-POSIX extensions,")
+			IF_FEATURE_MAKE_POSIX_202X(" POSIX 202X,")
+			" POSIX 2017\n");
+#if ENABLE_FEATURE_MAKE_EXTENSIONS && ENABLE_FEATURE_MAKE_POSIX_202X
+	fprintf(stderr,
+			"In strict POSIX mode the %s standard is enforced by default.\n",
+			DEFAULT_POSIX_LEVEL == STD_POSIX_2017 ? "2017" : "202X");
+#endif
+#if !ENABLE_FEATURE_MAKE_EXTENSIONS && !ENABLE_FEATURE_MAKE_POSIX_202X
+	fprintf(stderr, "\nFor details see:\n"
+	"  https://pubs.opengroup.org/onlinepubs/9699919799/utilities.2018edition/make.html\n");
+#endif
 	exit(2);
 }
 
