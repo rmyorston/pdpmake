@@ -42,7 +42,7 @@ usage(void)
 		IF_FEATURE_MAKE_EXTENSIONS(" [--posix] [-C path]")
 		" [-f makefile]"
 		IF_FEATURE_MAKE_POSIX_202X(" [-j num]")
-		IF_FEATURE_MAKE_POSIX_202X(" [-x pragma]")
+		IF_FEATURE_MAKE_EXTENSIONS(" [-x pragma]")
 		IF_FEATURE_MAKE_EXTENSIONS("\n\t")
 		" [-eiknpqrsSt] "
 		IF_NOT_FEATURE_MAKE_POSIX_202X("[macro=val ...]")
