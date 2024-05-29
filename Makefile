@@ -23,3 +23,6 @@ test: make
 
 clean:
 	rm -f $(OBJS) make
+
+pdpmake.1: pdpmake.txt
+	@txt2man -t PDPMAKE -s 1 pdpmake.txt >pdpmake.1
