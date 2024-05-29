@@ -35,34 +35,38 @@ unsigned char posix_level = DEFAULT_POSIX_LEVEL;
 #endif
 
 static void
-usage(void)
+usage(int exit_code)
 {
-	fprintf(stderr,
+	FILE *fp = ENABLE_FEATURE_MAKE_EXTENSIONS && exit_code == 0 ?
+				stdout : stderr;
+
+	fprintf(fp,
 		"Usage: %s"
 		IF_FEATURE_MAKE_EXTENSIONS(" [--posix] [-C path]")
 		" [-f makefile]"
 		IF_FEATURE_MAKE_POSIX_202X(" [-j num]")
 		IF_FEATURE_MAKE_EXTENSIONS(" [-x pragma]")
 		IF_FEATURE_MAKE_EXTENSIONS("\n\t")
-		" [-eiknpqrsSt] "
+		IF_NOT_FEATURE_MAKE_EXTENSIONS(" [-eiknpqrsSt] ")
+		IF_FEATURE_MAKE_EXTENSIONS(" [-ehiknpqrsSt] ")
 		IF_NOT_FEATURE_MAKE_POSIX_202X("[macro=val ...]")
 		IF_FEATURE_MAKE_POSIX_202X("[macro[::]=val ...]")
 		" [target ...]\n", myname);
 
-	fprintf(stderr, "\nThis build supports:"
+	fprintf(fp, "\nThis build supports:"
 			IF_FEATURE_MAKE_EXTENSIONS(" non-POSIX extensions,")
 			IF_FEATURE_MAKE_POSIX_202X(" POSIX 202X,")
 			" POSIX 2017\n");
 #if ENABLE_FEATURE_MAKE_EXTENSIONS && ENABLE_FEATURE_MAKE_POSIX_202X
-	fprintf(stderr,
+	fprintf(fp,
 			"In strict POSIX mode the %s standard is enforced by default.\n",
 			DEFAULT_POSIX_LEVEL == STD_POSIX_2017 ? "2017" : "202X");
 #endif
 #if !ENABLE_FEATURE_MAKE_EXTENSIONS && !ENABLE_FEATURE_MAKE_POSIX_202X
-	fprintf(stderr, "\nFor details see:\n"
+	fprintf(fp, "\nFor details see:\n"
 	"  https://pubs.opengroup.org/onlinepubs/9699919799/utilities.2018edition/make.html\n");
 #endif
-	exit(2);
+	exit(exit_code);
 }
 
 /*
@@ -98,6 +102,9 @@ process_options(int argc, char **argv, int from_env)
 		case 'e':	// Prefer env vars to macros in makefiles
 			flags |= OPT_e;
 			break;
+		case 'h':	// Print usage message and exit
+			usage(0);
+			break;
 		case 'i':	// Ignore fault mode
 			flags |= OPT_i;
 			break;
@@ -108,7 +115,7 @@ process_options(int argc, char **argv, int from_env)
 
 				for (s = optarg; *s; ++s) {
 					if (!isdigit(*s)) {
-						usage();
+						usage(2);
 					}
 				}
 				free(numjobs);
@@ -158,7 +165,7 @@ process_options(int argc, char **argv, int from_env)
 			if (from_env)
 				error("invalid MAKEFLAGS");
 			else
-				usage();
+				usage(2);
 		}
 	}
 	return flags;

@@ -2,7 +2,7 @@ NAME
   pdpmake - Public domain POSIX make
 
 SYNOPSIS
-  pdpmake [--posix] [-eiknpqrSst] [-C dir] [-f mkfile] [-j num_jobs]
+  pdpmake [--posix] [-ehiknpqrSst] [-C dir] [-f mkfile] [-j num_jobs]
           [-x pragma] [\fImacro\fP[::]=\fIvalue\fP ...] [\fItarget\fP ...]
 
 DESCRIPTION

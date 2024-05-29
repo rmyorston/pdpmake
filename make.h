@@ -94,7 +94,9 @@ extern char **environ;
 #define FALSE		(0)
 #define MAX(a,b)	((a)>(b)?(a):(b))
 
-#if ENABLE_FEATURE_MAKE_POSIX_202X
+#if ENABLE_FEATURE_MAKE_EXTENSIONS
+#define OPTSTR1 "ehij:knqrsSt"
+#elif ENABLE_FEATURE_MAKE_POSIX_202X
 #define OPTSTR1 "eij:knqrsSt"
 #else
 #define OPTSTR1 "eiknqrsSt"
@@ -107,6 +109,7 @@ extern char **environ;
 
 enum {
 	OPTBIT_e = 0,
+	IF_FEATURE_MAKE_EXTENSIONS(OPTBIT_h,)
 	OPTBIT_i,
 	IF_FEATURE_MAKE_POSIX_202X(OPTBIT_j,)
 	OPTBIT_k,
@@ -126,6 +129,7 @@ enum {
 	IF_FEATURE_MAKE_POSIX_202X(OPTBIT_make,)
 
 	OPT_e = (1 << OPTBIT_e),
+	OPT_h = IF_FEATURE_MAKE_EXTENSIONS((1 << OPTBIT_h)) + 0,
 	OPT_i = (1 << OPTBIT_i),
 	OPT_j = IF_FEATURE_MAKE_POSIX_202X((1 << OPTBIT_j)) + 0,
 	OPT_k = (1 << OPTBIT_k),
