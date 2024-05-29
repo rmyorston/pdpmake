@@ -50,7 +50,7 @@ usage(int exit_code)
 		IF_NOT_FEATURE_MAKE_EXTENSIONS(" [-eiknpqrsSt] ")
 		IF_FEATURE_MAKE_EXTENSIONS(" [-ehiknpqrsSt] ")
 		IF_NOT_FEATURE_MAKE_POSIX_202X("[macro=val ...]")
-		IF_FEATURE_MAKE_POSIX_202X("[macro[::]=val ...]")
+		IF_FEATURE_MAKE_POSIX_202X("[macro[::[:]]=val ...]")
 		" [target ...]\n", myname);
 
 	fprintf(fp, "\nThis build supports:"
@@ -248,12 +248,16 @@ expand_makeflags(int *fargc)
 static char **
 process_macros(char **argv, int level)
 {
-	char *p;
+	char *equal;
 
 	for (; *argv; argv++) {
-		IF_NOT_FEATURE_MAKE_POSIX_202X(const) int immediate = 0;
+#if ENABLE_FEATURE_MAKE_POSIX_202X
+		char *colon = NULL;
+		int immediate = 0;
+		int except_dollar = FALSE;
+#endif
 
-		if (!(p = strchr(*argv, '='))) {
+		if (!(equal = strchr(*argv, '='))) {
 #if ENABLE_FEATURE_MAKE_EXTENSIONS
 			// Skip targets on the command line
 			if (!posix && level == 1)
@@ -265,14 +269,24 @@ process_macros(char **argv, int level)
 		}
 
 #if ENABLE_FEATURE_MAKE_POSIX_202X
-		if (p - 2 > *argv && p[-1] == ':' && p[-2] == ':') {
+		if (equal - 2 > *argv && equal[-1] == ':' && equal[-2] == ':') {
 			if (POSIX_2017)
 				error("invalid macro assignment");
-			immediate = M_IMMEDIATE;
-			p[-2] = '\0';
+			if (equal - 3 > *argv  && equal[-3] == ':') {
+				// BSD-style ':='.  Expand RHS, but not '$$',
+				// resulting macro is delayed expansion.
+				colon = equal - 3;
+				except_dollar = TRUE;
+			} else {
+				// GNU-style ':='. Expand RHS, including '$$',
+				// resulting macro is immediate expansion.
+				colon = equal - 2;
+				immediate = M_IMMEDIATE;
+			}
+			*colon = '\0';
 		} else
 #endif
-			*p = '\0';
+			*equal = '\0';
 
 		/* We want to process _most_ macro assignments.
 		 * There are exceptions for particular values from the
@@ -285,18 +299,22 @@ process_macros(char **argv, int level)
 #endif
 
 				))) {
-			if (immediate) {
-				char *exp = expand_macros(p + 1, FALSE);
+#if ENABLE_FEATURE_MAKE_POSIX_202X
+			if (colon) {
+				char *exp = expand_macros(equal + 1, except_dollar);
 				setmacro(*argv, exp, level | immediate);
 				free(exp);
-			} else {
-				setmacro(*argv, p + 1, level);
-			}
+			} else
+#endif
+				setmacro(*argv, equal + 1, level);
 		}
 
-		*p = '=';
-		if (immediate)
-			p[-2] = ':';
+#if ENABLE_FEATURE_MAKE_POSIX_202X
+		if (colon)
+			*colon = ':';
+		else
+#endif
+			*equal = '=';
 	}
 	return argv;
 }

@@ -3,7 +3,7 @@ NAME
 
 SYNOPSIS
   pdpmake [--posix] [-ehiknpqrSst] [-C dir] [-f mkfile] [-j num_jobs]
-          [-x pragma] [\fImacro\fP[::]=\fIvalue\fP ...] [\fItarget\fP ...]
+          [-x pragma] [\fImacro\fP[::[:]]=\fIvalue\fP ...] [\fItarget\fP ...]
 
 DESCRIPTION
   The pdpmake utility creates or updates files following a set of rules.
