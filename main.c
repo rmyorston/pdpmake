@@ -1,6 +1,6 @@
 /*
  * make [--posix] [-C path] [-f makefile] [-j num] [-x pragma]
- *      [-eiknpqrsSt] [macro[::]=val ...] [target ...]
+ *      [-ehiknpqrsSt] [macro[::[:]]=val ...] [target ...]
  *
  *  --posix  Enforce POSIX mode (non-POSIX)
  *  -C  Change directory to path (non-POSIX)
@@ -8,6 +8,7 @@
  *  -j  Number of jobs to run in parallel (not implemented)
  *  -x  Pragma to make POSIX mode less strict (non-POSIX)
  *  -e  Environment variables override macros in makefiles
+ *  -h  Display help information (non-POSIX)
  *  -i  Ignore exit status
  *  -k  Continue on error
  *  -n  Pretend to make
