@@ -61,11 +61,12 @@ setmacro(const char *name, const char *val, int level)
 {
 	struct macro *mp;
 	bool valid = level & M_VALID;
+	bool from_env = level & M_ENVIRON;
 #if ENABLE_FEATURE_MAKE_EXTENSIONS || ENABLE_FEATURE_MAKE_POSIX_202X
 	bool immediate = level & M_IMMEDIATE;
 #endif
 
-	level &= ~(M_IMMEDIATE | M_VALID);
+	level &= ~(M_IMMEDIATE | M_VALID | M_ENVIRON);
 	mp = getmp(name);
 	if (mp) {
 		// Don't replace existing macro from a lower level
@@ -80,7 +81,7 @@ setmacro(const char *name, const char *val, int level)
 
 		if (!valid && !is_valid_macro(name)) {
 			// Silently drop invalid names from the environment
-			if (level == 3)
+			if (from_env)
 				return;
 #if ENABLE_FEATURE_MAKE_EXTENSIONS
 			error("invalid macro name '%s'%s", name,

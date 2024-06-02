@@ -291,8 +291,8 @@ process_macros(char **argv, int level)
 
 		/* We want to process _most_ macro assignments.
 		 * There are exceptions for particular values from the
-		 * environment (level 3). */
-		if (!(level == 3 &&
+		 * environment. */
+		if (!((level & M_ENVIRON) &&
 				(strcmp(*argv, "MAKEFLAGS") == 0
 					|| strcmp(*argv, "SHELL") == 0
 #if ENABLE_FEATURE_MAKE_POSIX_202X
@@ -514,7 +514,7 @@ main(int argc, char **argv)
 	}
 
 	// Process macro definitions from the environment
-	process_macros(environ, 3);
+	process_macros(environ, 3 | M_ENVIRON);
 
 	// Update MAKEFLAGS and environment
 	update_makeflags();

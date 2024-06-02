@@ -241,8 +241,9 @@ struct file {
 };
 
 // Flags passed to setmacro()
-#define M_IMMEDIATE  8		// immediate-expansion macro is being defined
-#define M_VALID     16		// assert macro name is valid
+#define M_IMMEDIATE  0x08	// immediate-expansion macro is being defined
+#define M_VALID      0x10	// assert macro name is valid
+#define M_ENVIRON    0x20	// macro imported from environment
 
 #define HTABSIZE 199
 
