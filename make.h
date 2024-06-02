@@ -55,8 +55,6 @@ extern char **environ;
 # define ENABLE_FEATURE_MAKE_EXTENSIONS 1
 #endif
 
-#define POSIX_2017 (posix && posix_level == STD_POSIX_2017)
-
 #ifndef DEFAULT_POSIX_LEVEL
 # define DEFAULT_POSIX_LEVEL STD_POSIX_2017
 #endif
@@ -64,10 +62,10 @@ extern char **environ;
 #if ENABLE_FEATURE_MAKE_EXTENSIONS
 # define IF_FEATURE_MAKE_EXTENSIONS(...) __VA_ARGS__
 # define IF_NOT_FEATURE_MAKE_EXTENSIONS(...)
+# define POSIX_2017 (posix && posix_level == STD_POSIX_2017)
 #else
 # define IF_FEATURE_MAKE_EXTENSIONS(...)
 # define IF_NOT_FEATURE_MAKE_EXTENSIONS(...) __VA_ARGS__
-# define posix_level DEFAULT_POSIX_LEVEL
 #endif
 
 // IF ENABLE_FEATURE_MAKE_POSIX_202X is non-zero POSIX 202X features
@@ -82,6 +80,12 @@ extern char **environ;
 #else
 # define IF_FEATURE_MAKE_POSIX_202X(...)
 # define IF_NOT_FEATURE_MAKE_POSIX_202X(...) __VA_ARGS__
+#endif
+
+#if ENABLE_FEATURE_MAKE_EXTENSIONS
+# define POSIX_2017 (posix && posix_level == STD_POSIX_2017)
+#elif ENABLE_FEATURE_MAKE_POSIX_202X
+# define POSIX_2017 FALSE
 #endif
 
 // If ENABLE_FEATURE_CLEAN_UP is non-zero all allocated structures are
@@ -275,12 +279,12 @@ extern struct name *target;
 extern uint32_t opts;
 extern int lineno;
 extern int dispno;
-extern bool posix;
-extern bool seen_first;
 #if ENABLE_FEATURE_MAKE_POSIX_202X
 extern char *numjobs;
 #endif
 #if ENABLE_FEATURE_MAKE_EXTENSIONS
+extern bool posix;
+extern bool seen_first;
 extern unsigned char pragma;
 extern unsigned char posix_level;
 #endif

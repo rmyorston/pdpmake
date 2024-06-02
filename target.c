@@ -121,8 +121,15 @@ check_name(const char *name)
 #endif
 
 	for (s = name; *s; ++s) {
-		if ((IF_FEATURE_MAKE_EXTENSIONS((pragma & P_TARGET_NAME) ||)
-				(ENABLE_FEATURE_MAKE_POSIX_202X && !POSIX_2017)
+		if ((
+#if ENABLE_FEATURE_MAKE_EXTENSIONS
+			(pragma & P_TARGET_NAME) ||
+#endif
+#if ENABLE_FEATURE_MAKE_POSIX_202X
+				!POSIX_2017
+#else
+				FALSE
+#endif
 			) ? !(isfname(*s) || *s == '/') : !ispname(*s))
 			return FALSE;
 	}

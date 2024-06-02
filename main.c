@@ -25,12 +25,12 @@ uint32_t opts;
 const char *myname;
 const char *makefile;
 struct file *makefiles;
-bool posix;
-bool seen_first;
 #if ENABLE_FEATURE_MAKE_POSIX_202X
 char *numjobs = NULL;
 #endif
 #if ENABLE_FEATURE_MAKE_EXTENSIONS
+bool posix;
+bool seen_first;
 unsigned char pragma = 0;
 unsigned char posix_level = DEFAULT_POSIX_LEVEL;
 #endif
@@ -499,12 +499,14 @@ main(int argc, char **argv)
 	setmacro("$", "$", 0 | M_VALID);
 
 	// Process macro definitions from the command line
-	if (!ENABLE_FEATURE_MAKE_EXTENSIONS || posix)
+#if ENABLE_FEATURE_MAKE_EXTENSIONS
+	if (!posix)
+		process_macros(argv, 1);
+	else
+#endif
 		// In POSIX mode macros must appear before targets.
 		// argv should now point to targets only.
 		argv = process_macros(argv, 1);
-	else
-		process_macros(argv, 1);
 
 	// Process macro definitions from MAKEFLAGS
 	if (fargv) {

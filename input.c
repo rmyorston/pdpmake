@@ -794,7 +794,10 @@ run_command(const char *cmd)
 		return val;
 
 	// Strip leading whitespace in POSIX 202X mode
-	if (!ENABLE_FEATURE_MAKE_EXTENSIONS || posix) {
+#if ENABLE_FEATURE_MAKE_EXTENSIONS
+	if (posix)
+#endif
+	{
 		s = val;
 		while (isspace(*s)) {
 			++s;
@@ -968,9 +971,12 @@ input(FILE *fd, int ilevel)
 				if (p == NULL || gettok(&q)) {
 					error("one include file per line");
 				}
-			} else if (posix && makefile == old_makefile) {
+			} else if (makefile == old_makefile) {
 				// In POSIX 202X no include file is unspecified behaviour.
-				error("no include file");
+# if ENABLE_FEATURE_MAKE_EXTENSIONS
+				if (posix)
+# endif
+					error("no include file");
 			}
 #endif
 
@@ -1259,17 +1265,17 @@ input(FILE *fd, int ilevel)
 		str1 = str2 ? str2 : readline(fd);
 		free(copy);
 		free(expanded);
+#if ENABLE_FEATURE_MAKE_EXTENSIONS
 		if (!seen_first && fd) {
 			if (findname(".POSIX")) {
 				// The first non-comment line from a real makefile
 				// defined the .POSIX special target.
-#if ENABLE_FEATURE_MAKE_EXTENSIONS
 				setenv("PDPMAKE_POSIXLY_CORRECT", "", 1);
-#endif
 				posix = TRUE;
 			}
 			seen_first = TRUE;
 		}
+#endif
 	}
 #if ENABLE_FEATURE_MAKE_EXTENSIONS
 	// Conditionals aren't allowed to span files

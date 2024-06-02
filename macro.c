@@ -23,12 +23,23 @@ is_valid_macro(const char *name)
 	for (s = name; *s; ++s) {
 		// In POSIX mode only a limited set of characters are guaranteed
 		// to be allowed in macro names.
-		if (IF_FEATURE_MAKE_EXTENSIONS(posix &&)
-				((
-					IF_FEATURE_MAKE_EXTENSIONS((pragma & P_MACRO_NAME) ||)
-					(ENABLE_FEATURE_MAKE_POSIX_202X && !POSIX_2017)
+#if ENABLE_FEATURE_MAKE_EXTENSIONS
+		if (posix)
+#endif
+		{
+			// Find the appropriate character set
+			if (((
+#if ENABLE_FEATURE_MAKE_EXTENSIONS
+					(pragma & P_MACRO_NAME) ||
+#endif
+#if ENABLE_FEATURE_MAKE_POSIX_202X
+					!POSIX_2017
+#else
+					FALSE
+#endif
 				) ? !isfname(*s) : !ispname(*s)))
 			return FALSE;
+		}
 		// As an extension allow anything that can get through the
 		// input parser, apart from the following.
 		if (*s == '=')
