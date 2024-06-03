@@ -485,9 +485,9 @@ main(int argc, char **argv)
 	if (fargv0) {
 		opts = process_options(fargc, fargv, TRUE);
 		fargv = fargv0 + optind;
+		// Reset getopt(3) so we can call it again
+		GETOPT_RESET();
 	}
-	// Reset getopt(3) so we can call it again
-	GETOPT_RESET();
 
 	// Process options from the command line
 	opts |= process_options(argc, argv, FALSE);
