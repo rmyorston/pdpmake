@@ -89,9 +89,19 @@ xrealloc(void *ptr, size_t len)
 char *
 xconcat3(const char *s1, const char *s2, const char *s3)
 {
-	size_t len = strlen(s1) + strlen(s2) + strlen(s3) + 1;
-	char *t = xmalloc(len);
-	return strcat(strcat(strcpy(t, s1), s2), s3);
+	const size_t len1 = strlen(s1);
+	const size_t len2 = strlen(s2);
+	const size_t len3 = strlen(s3);
+
+	char *t = xmalloc(len1 + len2 + len3 + 1);
+	char *s = t;
+
+	s = (char *)memcpy(s, s1, len1) + len1;
+	s = (char *)memcpy(s, s2, len2) + len2;
+	s = (char *)memcpy(s, s3, len3) + len3;
+	*s = '\0';
+
+	return t;
 }
 
 char *
