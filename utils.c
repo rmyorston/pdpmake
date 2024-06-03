@@ -72,7 +72,7 @@ void *
 xmalloc(size_t len)
 {
 	void *ret = malloc(len);
-	if (ret == NULL && errno == ENOMEM)
+	if (ret == NULL)
 		error("out of memory");
 	return ret;
 }
@@ -81,7 +81,7 @@ void *
 xrealloc(void *ptr, size_t len)
 {
 	void *ret = realloc(ptr, len);
-	if (ret == NULL && errno == ENOMEM)
+	if (ret == NULL)
 		error("out of memory");
 	return ret;
 }
