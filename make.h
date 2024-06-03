@@ -98,12 +98,21 @@ extern char **environ;
 #define FALSE		(0)
 #define MAX(a,b)	((a)>(b)?(a):(b))
 
-#if ENABLE_FEATURE_MAKE_EXTENSIONS
-#define OPTSTR1 "ehij:knqrsSt"
-#elif ENABLE_FEATURE_MAKE_POSIX_202X
-#define OPTSTR1 "eij:knqrsSt"
+#if defined(__GLIBC__) && ENABLE_FEATURE_MAKE_EXTENSIONS
+// By default GNU libc getopt(3) allows options and non-options to be
+// mixed.  Turn this off in POSIX mode.  The '+' prefix in OPTSTR1 is
+// otherwise unused and should be skipped.
+# define OPT_OFFSET + !posix
 #else
-#define OPTSTR1 "eiknqrsSt"
+# define OPT_OFFSET
+#endif
+
+#if ENABLE_FEATURE_MAKE_EXTENSIONS
+#define OPTSTR1 "+ehij:knqrsSt"
+#elif ENABLE_FEATURE_MAKE_POSIX_202X
+#define OPTSTR1 "+eij:knqrsSt"
+#else
+#define OPTSTR1 "+eiknqrsSt"
 #endif
 #if ENABLE_FEATURE_MAKE_EXTENSIONS
 #define OPTSTR2 "pf:C:x:"

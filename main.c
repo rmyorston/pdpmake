@@ -80,7 +80,7 @@ process_options(int argc, char **argv, int from_env)
 	int opt;
 	uint32_t flags = 0;
 
-	while ((opt = getopt(argc, argv, OPTSTR1 OPTSTR2)) != -1) {
+	while ((opt = getopt(argc, argv, OPTSTR1 OPTSTR2 OPT_OFFSET)) != -1) {
 		switch(opt) {
 #if ENABLE_FEATURE_MAKE_EXTENSIONS
 		case 'C':
@@ -201,7 +201,7 @@ expand_makeflags(int *fargc)
 	// add a hyphen.
 	argc = 3;
 	if (makeflags[0] != '-' && strchr(makeflags, '=') == NULL) {
-		if (strspn(makeflags, OPTSTR1) != strlen(makeflags))
+		if (strspn(makeflags, OPTSTR1 + 1) != strlen(makeflags))
 			error("invalid MAKEFLAGS");
 		*p++ = '-';
 	} else {
@@ -337,7 +337,7 @@ update_makeflags(void)
 	const char *t;
 	struct macro *mp;
 
-	t = OPTSTR1;
+	t = OPTSTR1 + 1;
 	for (i = 0; *t; t++) {
 #if ENABLE_FEATURE_MAKE_POSIX_202X
 		if (*t == ':')
