@@ -6,18 +6,15 @@
 
 total_failed=0
 
-lcwd=$(pwd)
-[ x"$tsdir" != x"" ] || tsdir="$lcwd"
-[ x"$bindir" != x"" ] || bindir="${lcwd%/*}" # one directory up from $lcwd
+: "${tsdir:=$PWD}"
+: "${bindir:=${PWD%/*}}" # one directory up from $PWD
 
-if [ x"$VERBOSE" = x ]; then
-	export VERBOSE=
-fi
-
-if [ x"$1" = x"-v" ]; then
-	export VERBOSE=1
+if [ "${1-}" = "-v" ]; then
+	VERBOSE=1
 	shift
 fi
+
+export VERBOSE="${VERBOSE-}"
 
 # Test whether the binary has non-POSIX extensions enabled.
 # Specifically, test whether double-colon rules are supported.
@@ -37,7 +34,7 @@ fi
 # Specifically, test whether pattern macro expansion is supported.
 OBJ=$(../make -f - 2>/dev/null <<EOF
 SRC = src/util.c
-tatget:
+target:
 	@echo \$(SRC:src/%.c=obj/%.o)
 EOF
 )
@@ -61,7 +58,7 @@ rc=$?
 total_failed=$((total_failed + rc))
 test $rc -ne 0 && status=1
 
-if [ $status -ne 0 ] && [ x"$VERBOSE" = x ]; then
+if [ $status -ne 0 ] && [ -z "$VERBOSE" ]; then
 	echo "$total_failed failure(s) detected; running with -v (verbose) will give more info"
 fi
 exit $status
