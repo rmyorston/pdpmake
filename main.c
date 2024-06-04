@@ -588,18 +588,30 @@ main(int argc, char **argv)
 		mark_special(".PHONY", OPT_phony, N_PHONY);
 #endif
 
+#if ENABLE_FEATURE_MAKE_EXTENSIONS
+	if (posix)
+#endif
+	{
+		// In POSIX mode only targets should now be in argv.
+		found_target = FALSE;
+		for (char **a = argv; *a; a++) {
+			if (!strchr(*a, '='))
+				found_target = TRUE;
+			else if (found_target)
+				error("macro assignments must precede targets");
+		}
+	}
+
 	estat = 0;
 	found_target = FALSE;
 	for (; *argv; argv++) {
 #if ENABLE_FEATURE_MAKE_EXTENSIONS
-		// In POSIX mode only targets should now be in argv.
-		// As an extension macros may still be present: skip them.
-		if (posix || !strchr(*argv, '='))
+		// Skip macro assignments.
+		if (strchr(*argv, '='))
+			continue;
 #endif
-		{
-			found_target = TRUE;
-			estat |= make(newname(*argv), 0);
-		}
+		found_target = TRUE;
+		estat |= make(newname(*argv), 0);
 	}
 	if (!found_target) {
 		if (!firstname)
