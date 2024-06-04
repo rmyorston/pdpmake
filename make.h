@@ -107,6 +107,10 @@ extern char **environ;
 # define OPT_OFFSET
 #endif
 
+#ifdef __clang__
+#pragma clang diagnostic ignored "-Wstring-plus-int"
+#endif
+
 #if ENABLE_FEATURE_MAKE_EXTENSIONS
 #define OPTSTR1 "+ehij:knqrsSt"
 #elif ENABLE_FEATURE_MAKE_POSIX_202X
