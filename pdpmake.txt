@@ -67,7 +67,7 @@ OPTIONS
              POSIX-compliant mode. For a list of supported pragmas
              see \fBPRAGMAS\fP below. Multiple -x options can be given.
 
-  \fImacro\fP[::]=\fIvalue\fP  Assign \fIvalue\fP to \fImacro\fP, overriding
+  \fImacro\fP[::[:]]=\fIvalue\fP  Assign \fIvalue\fP to \fImacro\fP, overriding
              the value of \fImacro\fP in the makefile, if it exists.
              Macro assignments and targets may be mixed on the command line.
              All assignments will be processed first, then the targets.
