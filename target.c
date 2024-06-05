@@ -111,6 +111,13 @@ check_name(const char *name)
 	const char *s;
 
 #if ENABLE_FEATURE_MAKE_EXTENSIONS
+# if defined(__CYGWIN__)
+	if (!posix || (pragma & P_WINDOWS)) {
+		if (isalpha(name[0]) && name[1] == ':' && name[2] == '/') {
+			name += 3;
+		}
+	}
+# endif
 	if (!posix) {
 		for (s = name; *s; ++s) {
 			if (*s == '=')
@@ -270,6 +277,9 @@ set_pragma(const char *name)
 		"target_name",
 		"command_comment",
 		"empty_suffix",
+#if defined(__CYGWIN__)
+		"windows",
+#endif
 		"posix_2017",
 		"posix_202x"
 	};

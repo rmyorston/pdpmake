@@ -155,7 +155,8 @@ modify_words(const char *val, int modifier, size_t lenf, size_t lenr,
 /*
  * Return a pointer to the next instance of a given character.  Macro
  * expansions are skipped so the ':' and '=' in $(VAR:.s1=.s2) aren't
- * detected as separators for rules or macro definitions.
+ * detected as separators in macro definitions.  Some other situations
+ * also require skipping the internals of a macro expansion.
  */
 static char *
 find_char(const char *str, int c)
@@ -168,6 +169,28 @@ find_char(const char *str, int c)
 	}
 	return NULL;
 }
+
+#if ENABLE_FEATURE_MAKE_EXTENSIONS && defined(__CYGWIN__)
+/*
+ * Check for a target rule by searching for a colon that isn't
+ * part of a Windows path.  Return a pointer to the colon or NULL.
+ */
+static char *
+find_colon(char *p)
+{
+	char *q;
+
+	for (q = p; (q = strchr(q, ':')); ++q) {
+		if (posix && !(pragma & P_WINDOWS))
+			break;
+		if (q == p || !isalpha(q[-1]) || q[1] != '/')
+			break;
+	}
+	return q;
+}
+#else
+# define find_colon(s) strchr(s, ':')
+#endif
 
 /*
  * Recursively expand any macros in str to an allocated string.
@@ -1112,7 +1135,7 @@ input(FILE *fd, int ilevel)
 		p = expanded = expand_macros(str, FALSE);
 
 		// Look for colon separator
-		q = find_char(p, ':');
+		q = find_colon(p);
 		if (q == NULL)
 			error("expected separator");
 
@@ -1131,7 +1154,7 @@ input(FILE *fd, int ilevel)
 		if (s) {
 			// Retrieve command from expanded copy of line
 			char *copy3 = expand_macros(copy, FALSE);
-			if ((p = find_char(copy3, ':')) && (p = strchr(p, ';')))
+			if ((p = find_colon(copy3)) && (p = strchr(p, ';')))
 				cp = newcmd(process_command(p + 1), cp);
 			free(copy3);
 			*s = '\0';
