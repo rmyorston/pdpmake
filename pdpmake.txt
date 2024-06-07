@@ -91,6 +91,10 @@ PRAGMAS
 				   \fBtarget_name\fP pragmas aren't required as the future
 				   standard allows the additional characters.
 
+  windows          Allow target names of the form C:/path in builds for
+                   Microsoft Windows. This may also require setting
+				   \fBtarget_name\fP.
+
 EXTENDED DESCRIPTION
 
   pdpmake is a make utility following the POSIX standard:
