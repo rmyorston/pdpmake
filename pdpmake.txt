@@ -190,9 +190,9 @@ EXTENDED DESCRIPTION
         - The wildcards '*', '?' and '[]' can be used in the targets
         and prerequisites of target rules.
         
-        - '#' on a command line or in a macro expansion doesn't indicate
-        the start of a comment. In other locations '#' can be escaped by
-        preceding it with a backslash.
+        - The '#' character on a command line or in a macro expansion
+        doesn't indicate the start of a comment. In other locations '#'
+        can be escaped by preceding it with a backslash.
         
         - Duplicated prerequisites are removed when the internal macro
         $? is expanded.
