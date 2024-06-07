@@ -103,9 +103,13 @@ process_options(int argc, char **argv, int from_env)
 		case 'e':	// Prefer env vars to macros in makefiles
 			flags |= OPT_e;
 			break;
+#if ENABLE_FEATURE_MAKE_EXTENSIONS
 		case 'h':	// Print usage message and exit
+			if (posix)
+				error("-h not allowed");
 			usage(0);
 			break;
+#endif
 		case 'i':	// Ignore fault mode
 			flags |= OPT_i;
 			break;
