@@ -1,6 +1,6 @@
 /*
  * make [--posix] [-C path] [-f makefile] [-j num] [-x pragma]
- *      [-ehiknpqrsSt] [macro[::[:]]=val ...] [target ...]
+ *      [-ehiknpqrsSt] [macro[:[:[:]]]=val ...] [target ...]
  *
  *  --posix  Enforce POSIX mode (non-POSIX)
  *  -C  Change directory to path (non-POSIX)
@@ -50,8 +50,14 @@ usage(int exit_code)
 		IF_FEATURE_MAKE_EXTENSIONS("\n\t")
 		IF_NOT_FEATURE_MAKE_EXTENSIONS(" [-eiknpqrsSt] ")
 		IF_FEATURE_MAKE_EXTENSIONS(" [-ehiknpqrsSt] ")
-		IF_NOT_FEATURE_MAKE_POSIX_202X("[macro=val ...]")
-		IF_FEATURE_MAKE_POSIX_202X("[macro[::[:]]=val ...]")
+		IF_NOT_FEATURE_MAKE_POSIX_202X(
+			IF_FEATURE_MAKE_EXTENSIONS("[macro[:]=val ...]")
+			IF_NOT_FEATURE_MAKE_EXTENSIONS("[macro=val ...]")
+		)
+		IF_FEATURE_MAKE_POSIX_202X(
+			IF_FEATURE_MAKE_EXTENSIONS("[macro[:[:[:]]]=val ...]")
+			IF_NOT_FEATURE_MAKE_EXTENSIONS("[macro[::[:]]=val ...]")
+		)
 		" [target ...]\n", myname);
 
 	fprintf(fp, "\nThis build supports:"
@@ -256,9 +262,11 @@ process_macros(char **argv, int level)
 	char *equal;
 
 	for (; *argv; argv++) {
-#if ENABLE_FEATURE_MAKE_POSIX_202X
+#if ENABLE_FEATURE_MAKE_EXTENSIONS || ENABLE_FEATURE_MAKE_POSIX_202X
 		char *colon = NULL;
 		int immediate = 0;
+#endif
+#if ENABLE_FEATURE_MAKE_POSIX_202X
 		int except_dollar = FALSE;
 #endif
 
@@ -273,22 +281,37 @@ process_macros(char **argv, int level)
 				break;
 		}
 
-#if ENABLE_FEATURE_MAKE_POSIX_202X
-		if (equal - 2 > *argv && equal[-1] == ':' && equal[-2] == ':') {
-			if (POSIX_2017)
-				error("invalid macro assignment");
-			if (equal - 3 > *argv  && equal[-3] == ':') {
-				// BSD-style ':='.  Expand RHS, but not '$$',
-				// resulting macro is delayed expansion.
-				colon = equal - 3;
-				except_dollar = TRUE;
-			} else {
-				// GNU-style ':='. Expand RHS, including '$$',
-				// resulting macro is immediate expansion.
-				colon = equal - 2;
+#if ENABLE_FEATURE_MAKE_EXTENSIONS || ENABLE_FEATURE_MAKE_POSIX_202X
+		if (equal - 1 > *argv && equal[-1] == ':') {
+# if ENABLE_FEATURE_MAKE_POSIX_202X
+			if (equal - 2 > *argv && equal[-2] == ':') {
+				if (POSIX_2017)
+					error("invalid macro assignment");
+				if (equal - 3 > *argv  && equal[-3] == ':') {
+					// BSD-style ':='.  Expand RHS, but not '$$',
+					// resulting macro is delayed expansion.
+					colon = equal - 3;
+					except_dollar = TRUE;
+				} else {
+					// GNU-style ':='. Expand RHS, including '$$',
+					// resulting macro is immediate expansion.
+					colon = equal - 2;
+					immediate = M_IMMEDIATE;
+				}
+				*colon = '\0';
+			} else
+# endif
+			{
+# if ENABLE_FEATURE_MAKE_EXTENSIONS
+				if (posix)
+					error("invalid macro assignment");
+				colon = equal - 1;
 				immediate = M_IMMEDIATE;
+				*colon = '\0';
+# else
+				error("invalid macro assignment");
+# endif
 			}
-			*colon = '\0';
 		} else
 #endif
 			*equal = '\0';
@@ -304,7 +327,7 @@ process_macros(char **argv, int level)
 #endif
 
 				))) {
-#if ENABLE_FEATURE_MAKE_POSIX_202X
+#if ENABLE_FEATURE_MAKE_EXTENSIONS || ENABLE_FEATURE_MAKE_POSIX_202X
 			if (colon) {
 				char *exp = expand_macros(equal + 1, except_dollar);
 				setmacro(*argv, exp, level | immediate);
@@ -314,7 +337,7 @@ process_macros(char **argv, int level)
 				setmacro(*argv, equal + 1, level);
 		}
 
-#if ENABLE_FEATURE_MAKE_POSIX_202X
+#if ENABLE_FEATURE_MAKE_EXTENSIONS || ENABLE_FEATURE_MAKE_POSIX_202X
 		if (colon)
 			*colon = ':';
 		else
