@@ -295,7 +295,10 @@ set_pragma(const char *name)
 			if (i >= BIT_POSIX_2017) {
 				// POSIX level is stored in a separate variable.
 				// No bits in 'pragma' are used.
-				posix_level = i - BIT_POSIX_2017;
+				if (posix_level == DEFAULT_POSIX_LEVEL)
+					posix_level = i - BIT_POSIX_2017;
+				else if (posix_level != i - BIT_POSIX_2017)
+					warning("unable to change POSIX level");
 			} else {
 				pragma |= 1 << i;
 			}
@@ -336,10 +339,6 @@ addrule(struct name *np, struct depend *dp, struct cmd *cp, int flag)
 #if ENABLE_FEATURE_MAKE_POSIX_202X
 		if (strcmp(np->n_name, ".PHONY") == 0)
 			return;
-#endif
-#if ENABLE_FEATURE_MAKE_EXTENSIONS
-		if (strcmp(np->n_name, ".PRAGMA") == 0)
-			pragma = 0;
 #endif
 		freerules(np->n_rule);
 		np->n_rule = NULL;
