@@ -83,13 +83,14 @@ PRAGMAS
   empty_suffix     Permit an empty suffix in macro expansions of the form
                    $(VAR:=.c).
 
-  posix_2017       Enforce the current POSIX 2017 standard rather than the
-                   future POSIX 202X.
+  posix_2017       Enforce the old POSIX 2017 standard.
 
-  posix_202x       Enforce the future POSIX 202X standard rather than the
-                   current POSIX 2017. In this case the \fBmacro_name\fP and
-				   \fBtarget_name\fP pragmas aren't required as the future
-				   standard allows the additional characters.
+  posix_2024       Enforce the current POSIX 2024 standard. In this case
+                   the \fBmacro_name\fP and \fBtarget_name\fP pragmas aren't
+                   required as the 2024 standard allows the additional
+                   characters.
+
+  posix_202x       An alias for posix_2024.
 
   windows          Allow target names of the form C:/path in builds for
                    Microsoft Windows. This may also require setting
@@ -133,41 +134,9 @@ EXTENDED DESCRIPTION
         This special target is unique to pdpmake and may not be available
         in other make utilities.
   
-  pdpmake implements a set of extensions from the future POSIX standard as
-  well as other make utilities. The set of available extensions are:
+  pdpmake implements a set of extensions to the POSIX standard. These may
+  be compatible with other make utilities. The available extensions are:
   
-        - Nested macro expansion. e.g. $(FOO$(BAR))
-        
-        - Prerequisites of the \fB.PHONY\fP special target are always
-        treated as being out-of-date.
-        
-        - More than one file can be specified on each include line.
-        
-        - Missing include files can be ignored by using -include \fIfile\fP
-        instead of \fBinclude\fP \fIfile\fP.
-        
-        - Missing or out-of-date include files are rebuilt if an appropriate
-        rule can be found.
-        
-        - The $^ and $+ internal macros evaluate to all prerequisites of the
-        current target (not just out-of-date ones, as with $?). $^ removes
-        duplicated prerequisites from the list, $+ doesn't.
-        
-        - If no \fBMAKE\fP environment variable is provided the \fBMAKE\fP
-        macro is initialised from argv[0], with a relative path converted
-        to absolute.
-        
-        - The macro assignments ::=, :::=, +=, ?= and != are permitted.
-        
-        - Pattern macros extend the standard suffix substitution in macro
-        expansion to allow changes to prefixes as well.
-        
-        - An escaped newline within a macro expansion on a command line
-        is replaced by a space.
-        
-        - The \fBCURDIR\fP macro is set to the current directory during
-        program start up.
-        
         - The -C directory command line option changes the current
         working directory.
         
@@ -210,6 +179,40 @@ EXTENDED DESCRIPTION
         - The $< and $* internal macros are given values in target rules.
         
         - When a build command receives a signal the target is removed.
+
+  The following features were added in the POSIX 2024 standard:
+  
+        - Nested macro expansion. e.g. $(FOO$(BAR))
+        
+        - Prerequisites of the \fB.PHONY\fP special target are always
+        treated as being out-of-date.
+        
+        - More than one file can be specified on each include line.
+        
+        - Missing include files can be ignored by using -include \fIfile\fP
+        instead of \fBinclude\fP \fIfile\fP.
+        
+        - Missing or out-of-date include files are rebuilt if an appropriate
+        rule can be found.
+        
+        - The $^ and $+ internal macros evaluate to all prerequisites of the
+        current target (not just out-of-date ones, as with $?). $^ removes
+        duplicated prerequisites from the list, $+ doesn't.
+        
+        - If no \fBMAKE\fP environment variable is provided the \fBMAKE\fP
+        macro is initialised from argv[0], with a relative path converted
+        to absolute.
+        
+        - The macro assignments ::=, :::=, +=, ?= and != are permitted.
+        
+        - Pattern macros extend the standard suffix substitution in macro
+        expansion to allow changes to prefixes as well.
+        
+        - An escaped newline within a macro expansion on a command line
+        is replaced by a space.
+        
+        - The \fBCURDIR\fP macro is set to the current directory during
+        program start up.
 
 COPYRIGHT
   pdpmake is in the public domain. See \fIhttps://unlicense.org\fP
