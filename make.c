@@ -55,7 +55,7 @@ docmds(struct name *np, struct cmd *cp)
 		// Location of command in makefile (for use in error messages)
 		makefile = cp->c_makefile;
 		dispno = cp->c_dispno;
-#if ENABLE_FEATURE_MAKE_POSIX_202X
+#if ENABLE_FEATURE_MAKE_POSIX_2024
 		opts &= ~OPT_make;	// We want to know if $(MAKE) is expanded
 #endif
 		q = command = expand_macros(cp->c_cmd, FALSE);
@@ -158,7 +158,7 @@ docmds(struct name *np, struct cmd *cp)
 	return estat;
 }
 
-#if !ENABLE_FEATURE_MAKE_POSIX_202X
+#if !ENABLE_FEATURE_MAKE_POSIX_2024
 # define make1(n, c, o, a, d, i) make1(n, c, o, i)
 #endif
 static int
@@ -169,7 +169,7 @@ make1(struct name *np, struct cmd *cp, char *oodate, char *allsrc,
 
 	name = splitlib(np->n_name, &member);
 	setmacro("?", oodate, 0 | M_VALID);
-#if ENABLE_FEATURE_MAKE_POSIX_202X
+#if ENABLE_FEATURE_MAKE_POSIX_2024
 	if (!POSIX_2017) {
 		setmacro("+", allsrc, 0 | M_VALID);
 		setmacro("^", dedup, 0 | M_VALID);
@@ -252,7 +252,7 @@ make(struct name *np, int level)
 	struct rule imprule;
 	struct cmd *sc_cmd = NULL;	// commands for single-colon rule
 	char *oodate = NULL;
-#if ENABLE_FEATURE_MAKE_POSIX_202X
+#if ENABLE_FEATURE_MAKE_POSIX_2024
 	char *allsrc = NULL;
 	char *dedup = NULL;
 #endif
@@ -309,7 +309,7 @@ make(struct name *np, int level)
 	}
 #endif
 
-#if ENABLE_FEATURE_MAKE_EXTENSIONS || ENABLE_FEATURE_MAKE_POSIX_202X
+#if ENABLE_FEATURE_MAKE_EXTENSIONS || ENABLE_FEATURE_MAKE_POSIX_2024
 	// Reset flag to detect duplicate prerequisites
 	if (!(np->n_flag & N_DOUBLE)) {
 		for (rp = np->n_rule; rp; rp = rp->r_next) {
@@ -355,12 +355,12 @@ make(struct name *np, int level)
 #endif
 					oodate = xappendword(oodate, dp->d_name->n_name);
 			}
-#if ENABLE_FEATURE_MAKE_POSIX_202X
+#if ENABLE_FEATURE_MAKE_POSIX_2024
 			allsrc = xappendword(allsrc, dp->d_name->n_name);
 			if (!(dp->d_name->n_flag & N_MARK))
 				dedup = xappendword(dedup, dp->d_name->n_name);
 #endif
-#if ENABLE_FEATURE_MAKE_EXTENSIONS || ENABLE_FEATURE_MAKE_POSIX_202X
+#if ENABLE_FEATURE_MAKE_EXTENSIONS || ENABLE_FEATURE_MAKE_POSIX_2024
 			dp->d_name->n_flag |= N_MARK;
 #endif
 			dtim = *timespec_max(&dtim, &dp->d_name->n_tim);
@@ -376,7 +376,7 @@ make(struct name *np, int level)
 				free(oodate);
 				oodate = NULL;
 			}
-#if ENABLE_FEATURE_MAKE_POSIX_202X
+#if ENABLE_FEATURE_MAKE_POSIX_2024
 			free(allsrc);
 			free(dedup);
 			allsrc = dedup = NULL;
@@ -416,7 +416,7 @@ make(struct name *np, int level)
 	} else if (!quest && level == 0 && !timespec_le(&np->n_tim, &dtim))
 		printf("%s: '%s' is up to date\n", myname, np->n_name);
 
-#if ENABLE_FEATURE_MAKE_POSIX_202X
+#if ENABLE_FEATURE_MAKE_POSIX_2024
 	free(allsrc);
 	free(dedup);
 #endif

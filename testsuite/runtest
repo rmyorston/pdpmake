@@ -30,7 +30,7 @@ then
 	OPTIONFLAGS="${OPTIONFLAGS}FEATURE_MAKE_EXTENSIONS:"
 fi
 
-# Test whether the binary has POSIX 202X features enabled.
+# Test whether the binary has POSIX 2024 features enabled.
 # Specifically, test whether pattern macro expansion is supported.
 OBJ=$(../make -f - 2>/dev/null <<EOF
 SRC = src/util.c
@@ -40,7 +40,7 @@ EOF
 )
 if [ "$OBJ" = "obj/util.o" ]
 then
-	OPTIONFLAGS="${OPTIONFLAGS}FEATURE_MAKE_POSIX_202X:"
+	OPTIONFLAGS="${OPTIONFLAGS}FEATURE_MAKE_POSIX_2024:"
 fi
 
 if [ "${OPTIONFLAGS}" = ":" ]

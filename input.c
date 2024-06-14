@@ -56,7 +56,7 @@ skip_macro(const char *s)
 	return (char *)s;
 }
 
-#if !ENABLE_FEATURE_MAKE_POSIX_202X
+#if !ENABLE_FEATURE_MAKE_POSIX_2024
 # define modify_words(v, m, lf, lr, fp, rp, fs, rs) \
 			modify_words(v, m, lf, lr, fs, rs)
 #endif
@@ -74,14 +74,14 @@ modify_words(const char *val, int modifier, size_t lenf, size_t lenr,
 				const char *find_suff, const char *repl_suff)
 {
 	char *s, *copy, *word, *sep, *newword, *buf = NULL;
-#if ENABLE_FEATURE_MAKE_POSIX_202X
+#if ENABLE_FEATURE_MAKE_POSIX_2024
 	size_t find_pref_len = 0, find_suff_len = 0;
 #endif
 
 	if (!modifier && lenf == 0 && lenr == 0)
 		return buf;
 
-#if ENABLE_FEATURE_MAKE_POSIX_202X
+#if ENABLE_FEATURE_MAKE_POSIX_2024
 	if (find_pref) {
 		// get length of find prefix, e.g: src/
 		find_pref_len = strlen(find_pref);
@@ -109,10 +109,10 @@ modify_words(const char *val, int modifier, size_t lenf, size_t lenr,
 				word = sep + 1;
 			}
 		}
-		if (IF_FEATURE_MAKE_POSIX_202X(find_pref != NULL ||)
+		if (IF_FEATURE_MAKE_POSIX_2024(find_pref != NULL ||)
 				lenf != 0 || lenr != 0) {
 			size_t lenw = strlen(word);
-#if ENABLE_FEATURE_MAKE_POSIX_202X
+#if ENABLE_FEATURE_MAKE_POSIX_2024
 			// This code implements pattern macro expansions:
 			//    https://austingroupbugs.net/view.php?id=519
 			//
@@ -201,7 +201,7 @@ expand_macros(const char *str, int except_dollar)
 	char *exp, *newexp, *s, *t, *p, *q, *name;
 	char *find, *replace, *modified;
 	char *expval, *expfind, *find_suff, *repl_suff;
-#if ENABLE_FEATURE_MAKE_POSIX_202X
+#if ENABLE_FEATURE_MAKE_POSIX_2024
 	char *find_pref = NULL, *repl_pref = NULL;
 #endif
 	size_t lenf, lenr;
@@ -214,7 +214,7 @@ expand_macros(const char *str, int except_dollar)
 			if (t[1] == '\0') {
 				break;
 			}
-#if ENABLE_FEATURE_MAKE_POSIX_202X
+#if ENABLE_FEATURE_MAKE_POSIX_2024
 			if (t[1] == '$' && except_dollar) {
 				t++;
 				continue;
@@ -249,7 +249,7 @@ expand_macros(const char *str, int except_dollar)
 				if ((replace = find_char(expfind, '='))) {
 					*replace++ = '\0';
 					lenf = strlen(expfind);
-#if ENABLE_FEATURE_MAKE_POSIX_202X
+#if ENABLE_FEATURE_MAKE_POSIX_2024
 					if (!POSIX_2017 && (find_suff = strchr(expfind, '%'))) {
 						find_pref = expfind;
 						repl_pref = replace;
@@ -273,7 +273,7 @@ expand_macros(const char *str, int except_dollar)
 			}
 
 			p = q = name;
-#if ENABLE_FEATURE_MAKE_POSIX_202X
+#if ENABLE_FEATURE_MAKE_POSIX_2024
 			// If not in POSIX mode expand macros in the name.
 			if (!POSIX_2017) {
 				char *expname = expand_macros(name, FALSE);
@@ -289,7 +289,7 @@ expand_macros(const char *str, int except_dollar)
 			// The internal macros support 'D' and 'F' modifiers
 			modifier = '\0';
 			switch (name[0]) {
-#if ENABLE_FEATURE_MAKE_POSIX_202X
+#if ENABLE_FEATURE_MAKE_POSIX_2024
 			case '^':
 			case '+':
 				if (POSIX_2017)
@@ -309,7 +309,7 @@ expand_macros(const char *str, int except_dollar)
 				// Recursive expansion
 				if (mp->m_flag)
 					error("recursive macro %s", name);
-#if ENABLE_FEATURE_MAKE_POSIX_202X
+#if ENABLE_FEATURE_MAKE_POSIX_2024
 				// Note if we've expanded $(MAKE)
 				if (strcmp(name, "MAKE") == 0)
 					opts |= OPT_make;
@@ -683,7 +683,7 @@ target_type(char *s)
 		".PRECIOUS",
 		".SILENT",
 		".SUFFIXES",
-#if ENABLE_FEATURE_MAKE_POSIX_202X
+#if ENABLE_FEATURE_MAKE_POSIX_2024
 		".PHONY",
 		".NOTPARALLEL",
 		".WAIT",
@@ -734,7 +734,7 @@ static char *
 process_command(char *s)
 {
 	char *t, *u;
-#if ENABLE_FEATURE_MAKE_POSIX_202X
+#if ENABLE_FEATURE_MAKE_POSIX_2024
 	int len;
 	char *outside;
 #endif
@@ -750,7 +750,7 @@ process_command(char *s)
 	}
 #endif
 
-#if ENABLE_FEATURE_MAKE_POSIX_202X
+#if ENABLE_FEATURE_MAKE_POSIX_2024
 	len = strlen(s) + 1;
 	outside = xmalloc(len);
 	memset(outside, 0, len);
@@ -762,14 +762,14 @@ process_command(char *s)
 	// Process escaped newlines.  Stop at first non-escaped newline.
 	for (t = u = s; *u && *u != '\n'; ) {
 		if (u[0] == '\\' && u[1] == '\n') {
-#if ENABLE_FEATURE_MAKE_POSIX_202X
+#if ENABLE_FEATURE_MAKE_POSIX_2024
 			if (POSIX_2017 || outside[u - s]) {
 #endif
 				// Outside macro: remove tab following escaped newline.
 				*t++ = *u++;
 				*t++ = *u++;
 				u += (*u == '\t');
-#if ENABLE_FEATURE_MAKE_POSIX_202X
+#if ENABLE_FEATURE_MAKE_POSIX_2024
 			} else {
 				// Inside macro: replace escaped newline and any leading
 				// whitespace on the following line with a single space.
@@ -784,13 +784,13 @@ process_command(char *s)
 		}
 	}
 	*t = '\0';
-#if ENABLE_FEATURE_MAKE_POSIX_202X
+#if ENABLE_FEATURE_MAKE_POSIX_2024
 	free(outside);
 #endif
 	return s;
 }
 
-#if ENABLE_FEATURE_MAKE_POSIX_202X
+#if ENABLE_FEATURE_MAKE_POSIX_2024
 static char *
 run_command(const char *cmd)
 {
@@ -817,7 +817,7 @@ run_command(const char *cmd)
 	if (val == NULL)
 		return val;
 
-	// Strip leading whitespace in POSIX 202X mode
+	// Strip leading whitespace in POSIX 2024 mode
 #if ENABLE_FEATURE_MAKE_EXTENSIONS
 	if (posix)
 #endif
@@ -928,7 +928,7 @@ input(FILE *fd, int ilevel)
 #else
 	const bool dbl = FALSE;
 #endif
-#if ENABLE_FEATURE_MAKE_POSIX_202X
+#if ENABLE_FEATURE_MAKE_POSIX_2024
 	bool minus;
 #else
 	const bool minus = FALSE;
@@ -952,7 +952,7 @@ input(FILE *fd, int ilevel)
 		str = process_line(str1);
 
 		// Check for an include line
-#if ENABLE_FEATURE_MAKE_POSIX_202X
+#if ENABLE_FEATURE_MAKE_POSIX_2024
 		minus = !POSIX_2017 && *str == '-';
 #endif
 		p = str + minus;
@@ -967,7 +967,7 @@ input(FILE *fd, int ilevel)
 			while ((p = gettok(&q)) != NULL) {
 				FILE *ifd;
 
-#if ENABLE_FEATURE_MAKE_POSIX_202X
+#if ENABLE_FEATURE_MAKE_POSIX_2024
 				if (!POSIX_2017) {
 					// Try to create include file or bring it up-to-date
 					opts |= OPT_include;
@@ -983,12 +983,12 @@ input(FILE *fd, int ilevel)
 					input(ifd, ilevel + 1);
 					fclose(ifd);
 				}
-#if ENABLE_FEATURE_MAKE_POSIX_202X
+#if ENABLE_FEATURE_MAKE_POSIX_2024
 				if (POSIX_2017)
 					break;
 #endif
 			}
-#if ENABLE_FEATURE_MAKE_POSIX_202X
+#if ENABLE_FEATURE_MAKE_POSIX_2024
 			if (POSIX_2017) {
 				// In POSIX 2017 zero or more than one include file is
 				// unspecified behaviour.
@@ -996,7 +996,7 @@ input(FILE *fd, int ilevel)
 					error("one include file per line");
 				}
 			} else if (makefile == old_makefile) {
-				// In POSIX 202X no include file is unspecified behaviour.
+				// In POSIX 2024 no include file is unspecified behaviour.
 # if ENABLE_FEATURE_MAKE_EXTENSIONS
 				if (posix)
 # endif
@@ -1015,18 +1015,18 @@ input(FILE *fd, int ilevel)
 			// Use a copy of the line:  we might need the original
 			// if this turns out to be a target rule.
 			char *copy2 = xstrdup(str);
-#if ENABLE_FEATURE_MAKE_EXTENSIONS || ENABLE_FEATURE_MAKE_POSIX_202X
+#if ENABLE_FEATURE_MAKE_EXTENSIONS || ENABLE_FEATURE_MAKE_POSIX_2024
 			char *newq = NULL;
 			char eq = '\0';
 #endif
 			q = find_char(copy2, '=');		// q can't be NULL
 
-#if ENABLE_FEATURE_MAKE_EXTENSIONS || ENABLE_FEATURE_MAKE_POSIX_202X
+#if ENABLE_FEATURE_MAKE_EXTENSIONS || ENABLE_FEATURE_MAKE_POSIX_2024
 			if (q - 1 > copy2) {
 				switch (q[-1]) {
 				case ':':
-# if ENABLE_FEATURE_MAKE_POSIX_202X
-					// '::=' and ':::=' are from POSIX 202X.
+# if ENABLE_FEATURE_MAKE_POSIX_2024
+					// '::=' and ':::=' are from POSIX 2024.
 					if (!POSIX_2017 && q - 2 > copy2 && q[-2] == ':') {
 						if (q - 3 > copy2 && q[-3] == ':') {
 							eq = 'B';	// BSD-style ':='
@@ -1042,15 +1042,15 @@ input(FILE *fd, int ilevel)
 					// ':=' is a non-POSIX extension.
 					if (posix)
 						break;
-					IF_FEATURE_MAKE_POSIX_202X(goto set_eq;)
+					IF_FEATURE_MAKE_POSIX_2024(goto set_eq;)
 # else
 					break;
 # endif
-# if ENABLE_FEATURE_MAKE_POSIX_202X
+# if ENABLE_FEATURE_MAKE_POSIX_2024
 				case '+':
 				case '?':
 				case '!':
-					// '+=', '?=' and '!=' are from POSIX 202X.
+					// '+=', '?=' and '!=' are from POSIX 2024.
 					if (POSIX_2017)
 						break;
  IF_FEATURE_MAKE_EXTENSIONS(set_eq:)
@@ -1083,14 +1083,14 @@ input(FILE *fd, int ilevel)
 			if (gettok(&p))
 				error("invalid macro assignment");
 
-#if ENABLE_FEATURE_MAKE_EXTENSIONS || ENABLE_FEATURE_MAKE_POSIX_202X
+#if ENABLE_FEATURE_MAKE_EXTENSIONS || ENABLE_FEATURE_MAKE_POSIX_2024
 			if (eq == ':') {
 				// GNU-style ':='.  Expand right-hand side of assignment.
 				// Macro is of type immediate-expansion.
 				q = newq = expand_macros(q, FALSE);
 				level |= M_IMMEDIATE;
 			}
-# if ENABLE_FEATURE_MAKE_POSIX_202X
+# if ENABLE_FEATURE_MAKE_POSIX_2024
 			else if (eq == 'B') {
 				// BSD-style ':='.  Expand right-hand side of assignment,
 				// though not '$$'.  Macro is of type delayed-expansion.
@@ -1123,7 +1123,7 @@ input(FILE *fd, int ilevel)
 # endif
 #endif
 			setmacro(a, q, level);
-#if ENABLE_FEATURE_MAKE_EXTENSIONS || ENABLE_FEATURE_MAKE_POSIX_202X
+#if ENABLE_FEATURE_MAKE_EXTENSIONS || ENABLE_FEATURE_MAKE_POSIX_2024
 			free(newq);
 #endif
 			free(copy2);
@@ -1165,7 +1165,7 @@ input(FILE *fd, int ilevel)
 		dp = NULL;
 		while (((p = gettok(&q)) != NULL)) {
 #if !ENABLE_FEATURE_MAKE_EXTENSIONS
-# if ENABLE_FEATURE_MAKE_POSIX_202X
+# if ENABLE_FEATURE_MAKE_POSIX_2024
 			if (!POSIX_2017 && strcmp(p, ".WAIT") == 0)
 				continue;
 # endif
@@ -1209,7 +1209,7 @@ input(FILE *fd, int ilevel)
 				files = gd.gl_pathv;
 			}
 			for (i = 0; i < nfile; ++i) {
-# if ENABLE_FEATURE_MAKE_POSIX_202X
+# if ENABLE_FEATURE_MAKE_POSIX_2024
 				if (!POSIX_2017 && strcmp(files[i], ".WAIT") == 0)
 					continue;
 # endif

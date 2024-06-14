@@ -46,7 +46,7 @@ extern char **environ;
 
 // Supported POSIX levels
 #define STD_POSIX_2017 0
-#define STD_POSIX_202X 1
+#define STD_POSIX_2024 1
 
 // If ENABLE_FEATURE_MAKE_EXTENSIONS is non-zero some non-POSIX extensions
 // are enabled.
@@ -56,7 +56,7 @@ extern char **environ;
 #endif
 
 #ifndef DEFAULT_POSIX_LEVEL
-# define DEFAULT_POSIX_LEVEL STD_POSIX_2017
+# define DEFAULT_POSIX_LEVEL STD_POSIX_2024
 #endif
 
 #if ENABLE_FEATURE_MAKE_EXTENSIONS
@@ -68,23 +68,23 @@ extern char **environ;
 # define IF_NOT_FEATURE_MAKE_EXTENSIONS(...) __VA_ARGS__
 #endif
 
-// IF ENABLE_FEATURE_MAKE_POSIX_202X is non-zero POSIX 202X features
+// IF ENABLE_FEATURE_MAKE_POSIX_2024 is non-zero POSIX 2024 features
 // are enabled.
-#ifndef ENABLE_FEATURE_MAKE_POSIX_202X
-# define ENABLE_FEATURE_MAKE_POSIX_202X ENABLE_FEATURE_MAKE_EXTENSIONS
+#ifndef ENABLE_FEATURE_MAKE_POSIX_2024
+# define ENABLE_FEATURE_MAKE_POSIX_2024 ENABLE_FEATURE_MAKE_EXTENSIONS
 #endif
 
-#if ENABLE_FEATURE_MAKE_POSIX_202X
-# define IF_FEATURE_MAKE_POSIX_202X(...) __VA_ARGS__
-# define IF_NOT_FEATURE_MAKE_POSIX_202X(...)
+#if ENABLE_FEATURE_MAKE_POSIX_2024
+# define IF_FEATURE_MAKE_POSIX_2024(...) __VA_ARGS__
+# define IF_NOT_FEATURE_MAKE_POSIX_2024(...)
 #else
-# define IF_FEATURE_MAKE_POSIX_202X(...)
-# define IF_NOT_FEATURE_MAKE_POSIX_202X(...) __VA_ARGS__
+# define IF_FEATURE_MAKE_POSIX_2024(...)
+# define IF_NOT_FEATURE_MAKE_POSIX_2024(...) __VA_ARGS__
 #endif
 
 #if ENABLE_FEATURE_MAKE_EXTENSIONS
 # define POSIX_2017 (posix && posix_level == STD_POSIX_2017)
-#elif ENABLE_FEATURE_MAKE_POSIX_202X
+#elif ENABLE_FEATURE_MAKE_POSIX_2024
 # define POSIX_2017 FALSE
 #endif
 
@@ -113,7 +113,7 @@ extern char **environ;
 
 #if ENABLE_FEATURE_MAKE_EXTENSIONS
 #define OPTSTR1 "+ehij:knqrsSt"
-#elif ENABLE_FEATURE_MAKE_POSIX_202X
+#elif ENABLE_FEATURE_MAKE_POSIX_2024
 #define OPTSTR1 "+eij:knqrsSt"
 #else
 #define OPTSTR1 "+eiknqrsSt"
@@ -128,7 +128,7 @@ enum {
 	OPTBIT_e = 0,
 	IF_FEATURE_MAKE_EXTENSIONS(OPTBIT_h,)
 	OPTBIT_i,
-	IF_FEATURE_MAKE_POSIX_202X(OPTBIT_j,)
+	IF_FEATURE_MAKE_POSIX_2024(OPTBIT_j,)
 	OPTBIT_k,
 	OPTBIT_n,
 	OPTBIT_q,
@@ -141,14 +141,14 @@ enum {
 	IF_FEATURE_MAKE_EXTENSIONS(OPTBIT_C,)
 	IF_FEATURE_MAKE_EXTENSIONS(OPTBIT_x,)
 	OPTBIT_precious,
-	IF_FEATURE_MAKE_POSIX_202X(OPTBIT_phony,)
-	IF_FEATURE_MAKE_POSIX_202X(OPTBIT_include,)
-	IF_FEATURE_MAKE_POSIX_202X(OPTBIT_make,)
+	IF_FEATURE_MAKE_POSIX_2024(OPTBIT_phony,)
+	IF_FEATURE_MAKE_POSIX_2024(OPTBIT_include,)
+	IF_FEATURE_MAKE_POSIX_2024(OPTBIT_make,)
 
 	OPT_e = (1 << OPTBIT_e),
 	OPT_h = IF_FEATURE_MAKE_EXTENSIONS((1 << OPTBIT_h)) + 0,
 	OPT_i = (1 << OPTBIT_i),
-	OPT_j = IF_FEATURE_MAKE_POSIX_202X((1 << OPTBIT_j)) + 0,
+	OPT_j = IF_FEATURE_MAKE_POSIX_2024((1 << OPTBIT_j)) + 0,
 	OPT_k = (1 << OPTBIT_k),
 	OPT_n = (1 << OPTBIT_n),
 	OPT_q = (1 << OPTBIT_q),
@@ -163,9 +163,9 @@ enum {
 	OPT_x = IF_FEATURE_MAKE_EXTENSIONS((1 << OPTBIT_x)) + 0,
 	// The following aren't command line options and must be last
 	OPT_precious = (1 << OPTBIT_precious),
-	OPT_phony = IF_FEATURE_MAKE_POSIX_202X((1 << OPTBIT_phony)) + 0,
-	OPT_include = IF_FEATURE_MAKE_POSIX_202X((1 << OPTBIT_include)) + 0,
-	OPT_make = IF_FEATURE_MAKE_POSIX_202X((1 << OPTBIT_make)) + 0,
+	OPT_phony = IF_FEATURE_MAKE_POSIX_2024((1 << OPTBIT_phony)) + 0,
+	OPT_include = IF_FEATURE_MAKE_POSIX_2024((1 << OPTBIT_include)) + 0,
+	OPT_make = IF_FEATURE_MAKE_POSIX_2024((1 << OPTBIT_make)) + 0,
 };
 
 // Options in OPTSTR1 that aren't included in MAKEFLAGS
@@ -205,10 +205,10 @@ struct name {
 #define N_SILENT	0x20	// Build target silently
 #define N_IGNORE	0x40	// Ignore build errors
 #define N_SPECIAL	0x80	// Special target
-#if ENABLE_FEATURE_MAKE_EXTENSIONS || ENABLE_FEATURE_MAKE_POSIX_202X
+#if ENABLE_FEATURE_MAKE_EXTENSIONS || ENABLE_FEATURE_MAKE_POSIX_2024
 #define N_MARK		0x100	// Mark for deduplication
 #endif
-#if ENABLE_FEATURE_MAKE_POSIX_202X
+#if ENABLE_FEATURE_MAKE_POSIX_2024
 #define N_PHONY		0x200	// Name is a phony target
 #else
 #define N_PHONY		0		// No support for phony targets
@@ -244,7 +244,7 @@ struct macro {
 	struct macro *m_next;	// Next variable
 	char *m_name;			// Its name
 	char *m_val;			// Its value
-#if ENABLE_FEATURE_MAKE_EXTENSIONS || ENABLE_FEATURE_MAKE_POSIX_202X
+#if ENABLE_FEATURE_MAKE_EXTENSIONS || ENABLE_FEATURE_MAKE_POSIX_2024
 	bool m_immediate;		// Immediate-expansion macro set using ::=
 #endif
 	bool m_flag;			// Infinite loop check
@@ -274,6 +274,7 @@ enum {
 	BIT_WINDOWS,
 #endif
 	BIT_POSIX_2017,
+	BIT_POSIX_2024,
 	BIT_POSIX_202X,
 
 	P_MACRO_NAME = (1 << BIT_MACRO_NAME),
@@ -298,7 +299,7 @@ extern struct name *target;
 extern uint32_t opts;
 extern int lineno;
 extern int dispno;
-#if ENABLE_FEATURE_MAKE_POSIX_202X
+#if ENABLE_FEATURE_MAKE_POSIX_2024
 extern char *numjobs;
 #endif
 #if ENABLE_FEATURE_MAKE_EXTENSIONS
@@ -314,7 +315,7 @@ extern unsigned char posix_level;
 #define isfname(c) (ispname(c) || c == '-')
 
 void print_details(void);
-#if !ENABLE_FEATURE_MAKE_POSIX_202X
+#if !ENABLE_FEATURE_MAKE_POSIX_2024
 #define expand_macros(s, e) expand_macros(s)
 #endif
 char *expand_macros(const char *str, int except_dollar);

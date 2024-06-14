@@ -132,7 +132,7 @@ check_name(const char *name)
 #if ENABLE_FEATURE_MAKE_EXTENSIONS
 			(pragma & P_TARGET_NAME) ||
 #endif
-#if ENABLE_FEATURE_MAKE_POSIX_202X
+#if ENABLE_FEATURE_MAKE_POSIX_2024
 				!POSIX_2017
 #else
 				FALSE
@@ -281,23 +281,27 @@ set_pragma(const char *name)
 		"windows",
 #endif
 		"posix_2017",
+		"posix_2024",
 		"posix_202x"
 	};
 	int i;
 
+	// posix_202x is an alias for posix_2024
 	for (i = 0; i < sizeof(p_name)/sizeof(p_name[0]); ++i) {
 		if (strcmp(name, p_name[i]) == 0) {
-#if !ENABLE_FEATURE_MAKE_POSIX_202X
-			if (i == BIT_POSIX_202X) {
+#if !ENABLE_FEATURE_MAKE_POSIX_2024
+			if (i == BIT_POSIX_2024 || i == BIT_POSIX_202X) {
 				break;
 			}
 #endif
 			if (i >= BIT_POSIX_2017) {
 				// POSIX level is stored in a separate variable.
 				// No bits in 'pragma' are used.
-				if (posix_level == DEFAULT_POSIX_LEVEL)
+				if (posix_level == DEFAULT_POSIX_LEVEL) {
 					posix_level = i - BIT_POSIX_2017;
-				else if (posix_level != i - BIT_POSIX_2017)
+					if (posix_level > STD_POSIX_2024)
+						posix_level = STD_POSIX_2024;
+				} else if (posix_level != i - BIT_POSIX_2017)
 					warning("unable to change POSIX level");
 			} else {
 				pragma |= 1 << i;
@@ -336,7 +340,7 @@ addrule(struct name *np, struct depend *dp, struct cmd *cp, int flag)
 
 	// Clear out prerequisites and commands
 	if ((np->n_flag & N_SPECIAL) && !dp && !cp) {
-#if ENABLE_FEATURE_MAKE_POSIX_202X
+#if ENABLE_FEATURE_MAKE_POSIX_2024
 		if (strcmp(np->n_name, ".PHONY") == 0)
 			return;
 #endif

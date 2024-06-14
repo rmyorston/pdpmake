@@ -39,7 +39,7 @@ target: source
 # certain macro expansions in POSIX 2017 mode.  This is a design
 # decision: other implementations may justifiably do this
 # differently and fail this test.
-optional FEATURE_MAKE_POSIX_202X
+optional FEATURE_MAKE_POSIX_2024
 if [ "$SKIP" = "1" ]
 then
 	SKIP=
@@ -192,11 +192,11 @@ bar:
 cd .. || exit 1; rm -rf make.tempdir 2>/dev/null
 
 # =================================================================
-# The following tests require POSIX 202X features to be enabled.
+# The following tests require POSIX 2024 features to be enabled.
 # They may fail in POSIX 2017 mode.
 # =================================================================
 
-optional FEATURE_MAKE_POSIX_202X
+optional FEATURE_MAKE_POSIX_2024
 # A macro created using ::= remembers it's of type immediate-expansion.
 # Immediate expansion also occurs when += is used to append to such a macro.
 testing "Appending to immediate-expansion macro" \
@@ -482,7 +482,7 @@ target:
 b}
 '
 
-# The CURDIR macro is supported in POSIX 202X.
+# The CURDIR macro is supported in POSIX 2024.
 testing "CURDIR macro" \
 	"make -f -" \
 	"OK\n" "" '
@@ -521,7 +521,7 @@ target:
 	@echo $(MYFLAG)
 '
 
-# POSIX 202X permits additional characters in macro and target names
+# POSIX 2024 permits additional characters in macro and target names
 testing "Allow - and / in target names, - in macro names" \
 	"make -f -" \
 	"/hello\nhel-lo\nmac-ro\n" "" '
@@ -706,13 +706,13 @@ target:
 SKIP=
 
 # =================================================================
-# The following tests require non-POSIX extensions and POSIX 202X
+# The following tests require non-POSIX extensions and POSIX 2024
 # features to be enabled.
 # They're expected to fail in POSIX mode.
 # =================================================================
 
 optional FEATURE_MAKE_EXTENSIONS
-test "$SKIP" = "" && optional FEATURE_MAKE_POSIX_202X
+test "$SKIP" = "" && optional FEATURE_MAKE_POSIX_2024
 # Skip duplicate entries in $? and $^
 mkdir make.tempdir && cd make.tempdir || exit 1
 touch -t 202206171200 file1 file3

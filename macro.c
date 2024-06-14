@@ -32,7 +32,7 @@ is_valid_macro(const char *name)
 #if ENABLE_FEATURE_MAKE_EXTENSIONS
 					(pragma & P_MACRO_NAME) ||
 #endif
-#if ENABLE_FEATURE_MAKE_POSIX_202X
+#if ENABLE_FEATURE_MAKE_POSIX_2024
 					!POSIX_2017
 #else
 					FALSE
@@ -44,7 +44,7 @@ is_valid_macro(const char *name)
 		// input parser, apart from the following.
 		if (*s == '=')
 			return FALSE;
-#if ENABLE_FEATURE_MAKE_POSIX_202X
+#if ENABLE_FEATURE_MAKE_POSIX_2024
 		if (isblank(*s) || iscntrl(*s))
 			return FALSE;
 #endif
@@ -73,7 +73,7 @@ setmacro(const char *name, const char *val, int level)
 	struct macro *mp;
 	bool valid = level & M_VALID;
 	bool from_env = level & M_ENVIRON;
-#if ENABLE_FEATURE_MAKE_EXTENSIONS || ENABLE_FEATURE_MAKE_POSIX_202X
+#if ENABLE_FEATURE_MAKE_EXTENSIONS || ENABLE_FEATURE_MAKE_POSIX_2024
 	bool immediate = level & M_IMMEDIATE;
 #endif
 
@@ -110,7 +110,7 @@ setmacro(const char *name, const char *val, int level)
 		mp->m_flag = FALSE;
 		mp->m_name = xstrdup(name);
 	}
-#if ENABLE_FEATURE_MAKE_EXTENSIONS || ENABLE_FEATURE_MAKE_POSIX_202X
+#if ENABLE_FEATURE_MAKE_EXTENSIONS || ENABLE_FEATURE_MAKE_POSIX_2024
 	mp->m_immediate = immediate;
 #endif
 	mp->m_level = level;

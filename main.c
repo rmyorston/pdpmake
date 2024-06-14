@@ -25,7 +25,7 @@ uint32_t opts;
 const char *myname;
 const char *makefile;
 struct file *makefiles;
-#if ENABLE_FEATURE_MAKE_POSIX_202X
+#if ENABLE_FEATURE_MAKE_POSIX_2024
 char *numjobs = NULL;
 #endif
 #if ENABLE_FEATURE_MAKE_EXTENSIONS
@@ -45,16 +45,16 @@ usage(int exit_code)
 		"Usage: %s"
 		IF_FEATURE_MAKE_EXTENSIONS(" [--posix] [-C path]")
 		" [-f makefile]"
-		IF_FEATURE_MAKE_POSIX_202X(" [-j num]")
+		IF_FEATURE_MAKE_POSIX_2024(" [-j num]")
 		IF_FEATURE_MAKE_EXTENSIONS(" [-x pragma]")
 		IF_FEATURE_MAKE_EXTENSIONS("\n\t")
 		IF_NOT_FEATURE_MAKE_EXTENSIONS(" [-eiknpqrsSt] ")
 		IF_FEATURE_MAKE_EXTENSIONS(" [-ehiknpqrsSt] ")
-		IF_NOT_FEATURE_MAKE_POSIX_202X(
+		IF_NOT_FEATURE_MAKE_POSIX_2024(
 			IF_FEATURE_MAKE_EXTENSIONS("[macro[:]=val ...]")
 			IF_NOT_FEATURE_MAKE_EXTENSIONS("[macro=val ...]")
 		)
-		IF_FEATURE_MAKE_POSIX_202X(
+		IF_FEATURE_MAKE_POSIX_2024(
 			IF_FEATURE_MAKE_EXTENSIONS("[macro[:[:[:]]]=val ...]")
 			IF_NOT_FEATURE_MAKE_EXTENSIONS("[macro[::[:]]=val ...]")
 		)
@@ -62,14 +62,14 @@ usage(int exit_code)
 
 	fprintf(fp, "\nThis build supports:"
 			IF_FEATURE_MAKE_EXTENSIONS(" non-POSIX extensions,")
-			IF_FEATURE_MAKE_POSIX_202X(" POSIX 202X,")
+			IF_FEATURE_MAKE_POSIX_2024(" POSIX 2024,")
 			" POSIX 2017\n");
-#if ENABLE_FEATURE_MAKE_EXTENSIONS && ENABLE_FEATURE_MAKE_POSIX_202X
+#if ENABLE_FEATURE_MAKE_EXTENSIONS && ENABLE_FEATURE_MAKE_POSIX_2024
 	fprintf(fp,
 			"In strict POSIX mode the %s standard is enforced by default.\n",
-			DEFAULT_POSIX_LEVEL == STD_POSIX_2017 ? "2017" : "202X");
+			DEFAULT_POSIX_LEVEL == STD_POSIX_2017 ? "2017" : "2024");
 #endif
-#if !ENABLE_FEATURE_MAKE_EXTENSIONS && !ENABLE_FEATURE_MAKE_POSIX_202X
+#if !ENABLE_FEATURE_MAKE_EXTENSIONS && !ENABLE_FEATURE_MAKE_POSIX_2024
 	fprintf(fp, "\nFor details see:\n"
 	"  https://pubs.opengroup.org/onlinepubs/9699919799/utilities.2018edition/make.html\n");
 #endif
@@ -119,7 +119,7 @@ process_options(int argc, char **argv, int from_env)
 		case 'i':	// Ignore fault mode
 			flags |= OPT_i;
 			break;
-#if ENABLE_FEATURE_MAKE_POSIX_202X
+#if ENABLE_FEATURE_MAKE_POSIX_2024
 		case 'j':
 			if (!POSIX_2017) {
 				const char *s;
@@ -262,11 +262,11 @@ process_macros(char **argv, int level)
 	char *equal;
 
 	for (; *argv; argv++) {
-#if ENABLE_FEATURE_MAKE_EXTENSIONS || ENABLE_FEATURE_MAKE_POSIX_202X
+#if ENABLE_FEATURE_MAKE_EXTENSIONS || ENABLE_FEATURE_MAKE_POSIX_2024
 		char *colon = NULL;
 		int immediate = 0;
 #endif
-#if ENABLE_FEATURE_MAKE_POSIX_202X
+#if ENABLE_FEATURE_MAKE_POSIX_2024
 		int except_dollar = FALSE;
 #endif
 
@@ -281,9 +281,9 @@ process_macros(char **argv, int level)
 				break;
 		}
 
-#if ENABLE_FEATURE_MAKE_EXTENSIONS || ENABLE_FEATURE_MAKE_POSIX_202X
+#if ENABLE_FEATURE_MAKE_EXTENSIONS || ENABLE_FEATURE_MAKE_POSIX_2024
 		if (equal - 1 > *argv && equal[-1] == ':') {
-# if ENABLE_FEATURE_MAKE_POSIX_202X
+# if ENABLE_FEATURE_MAKE_POSIX_2024
 			if (equal - 2 > *argv && equal[-2] == ':') {
 				if (POSIX_2017)
 					error("invalid macro assignment");
@@ -322,12 +322,12 @@ process_macros(char **argv, int level)
 		if (!((level & M_ENVIRON) &&
 				(strcmp(*argv, "MAKEFLAGS") == 0
 					|| strcmp(*argv, "SHELL") == 0
-#if ENABLE_FEATURE_MAKE_POSIX_202X
+#if ENABLE_FEATURE_MAKE_POSIX_2024
 					|| (strcmp(*argv, "CURDIR") == 0 && !useenv && !POSIX_2017)
 #endif
 
 				))) {
-#if ENABLE_FEATURE_MAKE_EXTENSIONS || ENABLE_FEATURE_MAKE_POSIX_202X
+#if ENABLE_FEATURE_MAKE_EXTENSIONS || ENABLE_FEATURE_MAKE_POSIX_2024
 			if (colon) {
 				char *exp = expand_macros(equal + 1, except_dollar);
 				setmacro(*argv, exp, level | immediate);
@@ -337,7 +337,7 @@ process_macros(char **argv, int level)
 				setmacro(*argv, equal + 1, level);
 		}
 
-#if ENABLE_FEATURE_MAKE_EXTENSIONS || ENABLE_FEATURE_MAKE_POSIX_202X
+#if ENABLE_FEATURE_MAKE_EXTENSIONS || ENABLE_FEATURE_MAKE_POSIX_2024
 		if (colon)
 			*colon = ':';
 		else
@@ -366,14 +366,14 @@ update_makeflags(void)
 
 	t = OPTSTR1 + 1;
 	for (i = 0; *t; t++) {
-#if ENABLE_FEATURE_MAKE_POSIX_202X
+#if ENABLE_FEATURE_MAKE_POSIX_2024
 		if (*t == ':')
 			continue;
 #endif
 		if ((opts & OPT_MASK & (1 << i))) {
 			optbuf[1] = *t;
 			makeflags = xappendword(makeflags, optbuf);
-#if ENABLE_FEATURE_MAKE_POSIX_202X
+#if ENABLE_FEATURE_MAKE_POSIX_2024
 			if (*t == 'j') {
 				makeflags = xappendword(makeflags, numjobs);
 			}
@@ -464,7 +464,7 @@ mark_special(const char *special, uint32_t oflag, uint16_t nflag)
 int
 main(int argc, char **argv)
 {
-#if ENABLE_FEATURE_MAKE_POSIX_202X
+#if ENABLE_FEATURE_MAKE_POSIX_2024
 	const char *path, *newpath = NULL;
 #else
 	const char *path = "make";
@@ -492,7 +492,7 @@ main(int argc, char **argv)
 	}
 #endif
 
-#if ENABLE_FEATURE_MAKE_POSIX_202X
+#if ENABLE_FEATURE_MAKE_POSIX_2024
 	if (!POSIX_2017) {
 		path = argv[0];
 		if (argv[0][0] != '/' && strchr(argv[0], '/')) {
@@ -553,7 +553,7 @@ main(int argc, char **argv)
 
 	setmacro("SHELL", "/bin/sh", 4);
 	setmacro("MAKE", path, 4);
-#if ENABLE_FEATURE_MAKE_POSIX_202X
+#if ENABLE_FEATURE_MAKE_POSIX_2024
 	if (!POSIX_2017) {
 		char *cwd = NULL;
 		size_t len = 0;
@@ -610,7 +610,7 @@ main(int argc, char **argv)
 	mark_special(".SILENT", OPT_s, N_SILENT);
 	mark_special(".IGNORE", OPT_i, N_IGNORE);
 	mark_special(".PRECIOUS", OPT_precious, N_PRECIOUS);
-#if ENABLE_FEATURE_MAKE_POSIX_202X
+#if ENABLE_FEATURE_MAKE_POSIX_2024
 	if (!POSIX_2017)
 		mark_special(".PHONY", OPT_phony, N_PHONY);
 #endif
@@ -647,7 +647,7 @@ main(int argc, char **argv)
 	}
 
 #if ENABLE_FEATURE_CLEAN_UP
-# if ENABLE_FEATURE_MAKE_POSIX_202X
+# if ENABLE_FEATURE_MAKE_POSIX_2024
 	free((void *)numjobs);
 # endif
 	freenames();
