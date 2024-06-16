@@ -100,11 +100,8 @@ dyndep(struct name *np, struct rule *imprule)
 }
 
 #define RULES \
-	".SUFFIXES:.o .c .y .l .a .sh .f\n" \
 	".c.o:\n" \
 	"	$(CC) $(CFLAGS) -c $<\n" \
-	".f.o:\n" \
-	"	$(FC) $(FFLAGS) -c $<\n" \
 	".y.o:\n" \
 	"	$(YACC) $(YFLAGS) $<\n" \
 	"	$(CC) $(CFLAGS) -c y.tab.c\n" \
@@ -125,23 +122,28 @@ dyndep(struct name *np, struct rule *imprule)
 	"	$(CC) -c $(CFLAGS) $<\n" \
 	"	$(AR) $(ARFLAGS) $@ $*.o\n" \
 	"	rm -f $*.o\n" \
-	".f.a:\n" \
-	"	$(FC) -c $(FFLAGS) $<\n" \
-	"	$(AR) $(ARFLAGS) $@ $*.o\n" \
-	"	rm -f $*.o\n" \
 	".c:\n" \
 	"	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $<\n" \
-	".f:\n" \
-	"	$(FC) $(FFLAGS) $(LDFLAGS) -o $@ $<\n" \
 	".sh:\n" \
 	"	cp $< $@\n" \
 	"	chmod a+x $@\n"
 
+#define RULES_2017 \
+	".SUFFIXES:.o .c .y .l .a .sh .f\n" \
+	".f.o:\n" \
+	"	$(FC) $(FFLAGS) -c $<\n" \
+	".f.a:\n" \
+	"	$(FC) -c $(FFLAGS) $<\n" \
+	"	$(AR) $(ARFLAGS) $@ $*.o\n" \
+	"	rm -f $*.o\n" \
+	".f:\n" \
+	"	$(FC) $(FFLAGS) $(LDFLAGS) -o $@ $<\n"
+
+#define RULES_2024 \
+	".SUFFIXES:.o .c .y .l .a .sh\n"
+
 #define MACROS \
-	"CC=c99\n" \
 	"CFLAGS=-O1\n" \
-	"FC=fort77\n" \
-	"FFLAGS=-O1\n" \
 	"YACC=yacc\n" \
 	"YFLAGS=\n" \
 	"LEX=lex\n" \
@@ -149,6 +151,17 @@ dyndep(struct name *np, struct rule *imprule)
 	"AR=ar\n" \
 	"ARFLAGS=-rv\n" \
 	"LDFLAGS=\n"
+
+#define MACROS_2017 \
+	"CC=c99\n" \
+	"FC=fort77\n" \
+	"FFLAGS=-O1\n" \
+
+#define MACROS_2024 \
+	"CC=c17\n"
+
+#define MACROS_EXT \
+	"CC=cc\n"
 
 /*
  * Read the built-in rules using a fake fgets-like interface.
@@ -158,9 +171,42 @@ getrules(char *s, int size)
 {
 	char *r = s;
 	static const char *rulepos = NULL;
+	static int rule_idx = 0;
 
-	if (rulepos == NULL)
-		rulepos = (RULES MACROS) + (norules ? sizeof(RULES) - 1 : 0);
+	if (rulepos == NULL || *rulepos == '\0') {
+		if (rule_idx == 0) {
+			rulepos = MACROS;
+			rule_idx++;
+		} else if (rule_idx == 1) {
+#if ENABLE_FEATURE_MAKE_EXTENSIONS
+			if (POSIX_2017)
+				rulepos = MACROS_2017;
+			else if (posix)
+				rulepos = MACROS_2024;
+			else
+				rulepos = MACROS_EXT;
+#elif ENABLE_FEATURE_MAKE_POSIX_2024
+			rulepos = MACROS_2024;
+#else
+			rulepos = MACROS_2017;
+#endif
+			rule_idx++;
+		} else if (!norules) {
+			if (rule_idx == 2) {
+#if ENABLE_FEATURE_MAKE_EXTENSIONS
+				rulepos = POSIX_2017 ? RULES_2017 : RULES_2024;
+#elif ENABLE_FEATURE_MAKE_POSIX_2024
+				rulepos = RULES_2024;
+#else
+				rulepos = RULES_2017;
+#endif
+				rule_idx++;
+			} else if (rule_idx == 3) {
+				rulepos = RULES;
+				rule_idx++;
+			}
+		}
+	}
 
 	if (*rulepos == '\0')
 		return NULL;
