@@ -155,7 +155,7 @@ newfile(char *str, struct file *fphead)
 	struct file *fpnew;
 	struct file *fp;
 
-	fpnew = xmalloc(sizeof(struct cmd));
+	fpnew = xmalloc(sizeof(struct file));
 	fpnew->f_next = NULL;
 	fpnew->f_name = xstrdup(str);
 
