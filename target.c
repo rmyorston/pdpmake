@@ -267,23 +267,24 @@ inc_ref(void *vp)
 }
 
 #if ENABLE_FEATURE_MAKE_EXTENSIONS
+// Order must match constants in make.h
+// POSIX levels must be last and in increasing order
+static const char *p_name[] = {
+	"macro_name",
+	"target_name",
+	"command_comment",
+	"empty_suffix",
+#if defined(__CYGWIN__)
+	"windows",
+#endif
+	"posix_2017",
+	"posix_2024",
+	"posix_202x"
+};
+
 void
 set_pragma(const char *name)
 {
-	// Order must match constants in make.h
-	// POSIX levels must be last and in increasing order
-	static const char *p_name[] = {
-		"macro_name",
-		"target_name",
-		"command_comment",
-		"empty_suffix",
-#if defined(__CYGWIN__)
-		"windows",
-#endif
-		"posix_2017",
-		"posix_2024",
-		"posix_202x"
-	};
 	int i;
 
 	// posix_202x is an alias for posix_2024
@@ -310,6 +311,26 @@ set_pragma(const char *name)
 		}
 	}
 	warning("invalid pragma '%s'", name);
+}
+
+void
+pragmas_to_env(void)
+{
+	int i;
+	char *val = NULL;
+
+	for (i = 0; i < BIT_POSIX_2017; ++i) {
+		if ((pragma & (1 << i)))
+			val = xappendword(val, p_name[i]);
+	}
+
+	if (posix_level != DEFAULT_POSIX_LEVEL)
+		val = xappendword(val, p_name[BIT_POSIX_2017 + posix_level]);
+
+	if (val) {
+		setenv("PDPMAKE_PRAGMAS", val, 1);
+		free(val);
+	}
 }
 #endif
 
@@ -376,6 +397,7 @@ addrule(struct name *np, struct depend *dp, struct cmd *cp, int flag)
 		for (; dp; dp = dp->d_next) {
 			set_pragma(dp->d_name->n_name);
 		}
+		pragmas_to_env();
 	}
 #endif
 }

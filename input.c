@@ -903,6 +903,21 @@ wildcard(char *p, glob_t *gd)
 	}
 	return 1;
 }
+
+void
+pragmas_from_env(void)
+{
+	char *p, *q, *var;
+	const char *env = getenv("PDPMAKE_PRAGMAS");
+
+	if (env == NULL)
+		return;
+
+	q = var = xstrdup(env);
+	while ((p = gettok(&q)) != NULL)
+		set_pragma(p);
+	free(var);
+}
 #endif
 
 /*

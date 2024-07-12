@@ -357,3 +357,5 @@ unsigned int getbucket(const char *name);
 struct file *newfile(char *str, struct file *fphead);
 void freefiles(struct file *fp);
 int is_valid_target(const char *name);
+void pragmas_from_env(void);
+void pragmas_to_env(void);

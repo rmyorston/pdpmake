@@ -490,6 +490,7 @@ main(int argc, char **argv)
 	} else {
 		posix = getenv("PDPMAKE_POSIXLY_CORRECT") != NULL;
 	}
+	pragmas_from_env();
 #endif
 
 #if ENABLE_FEATURE_MAKE_POSIX_2024
@@ -525,8 +526,10 @@ main(int argc, char **argv)
 
 	setmacro("$", "$", 0 | M_VALID);
 
-	// Process macro definitions from the command line
 #if ENABLE_FEATURE_MAKE_EXTENSIONS
+	pragmas_to_env();
+
+	// Process macro definitions from the command line
 	if (!posix)
 		process_macros(argv, 1);
 	else
