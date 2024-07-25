@@ -8,6 +8,8 @@ It should build on most modernish Unix-style systems:
  - It comes with its own makefile, naturally, but if you don't have a `make` binary already the command `cc -o make *.c` should get you started.
 
  - Command line options may not work properly due to differences in how `getopt(3)` is reset.  Adjust `GETOPT_RESET()` in make.h for your platform, if necessary.
+ 
+ - Building on MacOS may require a command like: `make CFLAGS="-D_DARWIN_C_SOURCE -Dst_mtim=st_mtimespec"`
 
 Microsoft Windows users will find `pdpmake` included in the
 [BusyBox for Windows](https://frippery.org/busybox/index.html) binaries.
