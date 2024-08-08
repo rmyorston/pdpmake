@@ -55,9 +55,6 @@ newcmd(char *str, struct cmd *cphead)
 	while (isspace(*str))
 		str++;
 
-	if (*str == '\0')		// No command, return current head
-		return cphead;
-
 	cpnew = xmalloc(sizeof(struct cmd));
 	cpnew->c_next = NULL;
 	cpnew->c_cmd = xstrdup(str);

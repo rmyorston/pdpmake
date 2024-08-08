@@ -71,7 +71,9 @@ docmds(struct name *np, struct cmd *cp)
 				sdomake = TRUE + 1;
 			else
 				break;
-			q++;
+			do {
+				q++;
+			} while (isblank(*q));
 		}
 
 		if (sdomake > TRUE) {
@@ -81,7 +83,7 @@ docmds(struct name *np, struct cmd *cp)
 		} else if (!sdomake)
 			ssilent = dotouch;
 
-		if (!ssilent) {
+		if (!ssilent && *q != '\0') {	// Ignore empty commands
 			puts(q);
 			fflush(stdout);
 		}
@@ -92,7 +94,7 @@ docmds(struct name *np, struct cmd *cp)
 			continue;
 		}
 
-		if (sdomake) {
+		if (sdomake && *q != '\0') {	// Ignore empty commands
 			// Get the shell to execute it
 			int status;
 			char *cmd = !signore IF_FEATURE_MAKE_EXTENSIONS(&& posix) ?

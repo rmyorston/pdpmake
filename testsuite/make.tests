@@ -35,6 +35,17 @@ testing ".DEFAULT rule for prerequisite" \
 target: source
 '
 
+mkdir make.tempdir && cd make.tempdir || exit 1
+touch target.xyz
+testing "Empty command overrides inference rule" \
+	"make -f - target 2>/dev/null" "" "" '
+.SUFFIXES: .xyz
+.xyz:
+	@echo xyz
+target: ;
+'
+cd .. || exit 1; rm -rf make.tempdir 2>/dev/null
+
 # Early versions of the code didn't properly implement skipping
 # certain macro expansions in POSIX 2017 mode.  This is a design
 # decision: other implementations may justifiably do this

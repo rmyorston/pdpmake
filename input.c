@@ -588,7 +588,7 @@ make_fgets(char *s, int size, FILE *fd)
  * Ignore comment lines.  Return NULL on EOF.
  */
 static char *
-readline(FILE *fd)
+readline(FILE *fd, int want_command)
 {
 	char *p, *str = NULL;
 	int pos = 0;
@@ -626,6 +626,9 @@ readline(FILE *fd)
 			continue;
 		}
 		dispno = lineno;
+
+		if (want_command && *str == '\t')
+			return str;
 
 		// Check for comment lines and lines that are conditionally skipped.
 		p = str;
@@ -950,7 +953,7 @@ input(FILE *fd, int ilevel)
 #endif
 
 	lineno = 0;
-	str1 = readline(fd);
+	str1 = readline(fd, FALSE);
 	while (str1) {
 		str2 = NULL;
 		if (*str1 == '\t')	// Command without target
@@ -1242,7 +1245,7 @@ input(FILE *fd, int ilevel)
 
 		// Create list of commands
 		startno = dispno;
-		while ((str2 = readline(fd)) && *str2 == '\t') {
+		while ((str2 = readline(fd, TRUE)) && *str2 == '\t') {
 			cp = newcmd(process_command(str2), cp);
 			free(str2);
 		}
@@ -1301,7 +1304,7 @@ input(FILE *fd, int ilevel)
  end_loop:
 		free(str1);
 		dispno = lineno;
-		str1 = str2 ? str2 : readline(fd);
+		str1 = str2 ? str2 : readline(fd, FALSE);
 		free(copy);
 		free(expanded);
 #if ENABLE_FEATURE_MAKE_EXTENSIONS
