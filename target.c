@@ -59,7 +59,7 @@ newcmd(char *str, struct cmd *cphead)
 	cpnew->c_next = NULL;
 	cpnew->c_cmd = xstrdup(str);
 	cpnew->c_refcnt = 0;
-	cpnew->c_makefile = makefile;
+	cpnew->c_makefile = makefile ? xstrdup(makefile) : NULL;
 	cpnew->c_dispno = dispno;
 
 	if (cphead == NULL)
@@ -82,6 +82,7 @@ freecmds(struct cmd *cp)
 		for (; cp; cp = nextcp) {
 			nextcp = cp->c_next;
 			free(cp->c_cmd);
+			free((void *)cp->c_makefile);
 			free(cp);
 		}
 	}
