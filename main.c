@@ -61,17 +61,29 @@ usage(int exit_code)
 		" [target ...]\n", myname);
 
 	fprintf(fp, "\nThis build supports:"
-			IF_FEATURE_MAKE_EXTENSIONS(" non-POSIX extensions,")
-			IF_FEATURE_MAKE_POSIX_2024(" POSIX 2024,")
-			" POSIX 2017\n");
+			IF_FEATURE_MAKE_EXTENSIONS(
+				" non-POSIX extensions,"
+				IF_FEATURE_MAKE_POSIX_2024(" POSIX 2024,")
+				" POSIX 2017\n"
+			)
+			IF_NOT_FEATURE_MAKE_EXTENSIONS(
+				IF_FEATURE_MAKE_POSIX_2024(" POSIX 2024")
+				IF_NOT_FEATURE_MAKE_POSIX_2024(" POSIX 2017")
+			)
+			);
 #if ENABLE_FEATURE_MAKE_EXTENSIONS && ENABLE_FEATURE_MAKE_POSIX_2024
 	fprintf(fp,
 			"In strict POSIX mode the %s standard is enforced by default.\n",
 			DEFAULT_POSIX_LEVEL == STD_POSIX_2017 ? "2017" : "2024");
 #endif
-#if !ENABLE_FEATURE_MAKE_EXTENSIONS && !ENABLE_FEATURE_MAKE_POSIX_2024
+#if !ENABLE_FEATURE_MAKE_EXTENSIONS
+# if ENABLE_FEATURE_MAKE_POSIX_2024
 	fprintf(fp, "\nFor details see:\n"
-	"  https://pubs.opengroup.org/onlinepubs/9699919799/utilities.2018edition/make.html\n");
+	"  https://pubs.opengroup.org/onlinepubs/9799919799.2024edition/utilities/make.html\n");
+# else
+	fprintf(fp, "\nFor details see:\n"
+	"  https://pubs.opengroup.org/onlinepubs/9699919799.2018edition/utilities/make.html\n");
+# endif
 #endif
 	exit(exit_code);
 }
