@@ -19,6 +19,7 @@ export VERBOSE="${VERBOSE-}"
 # Test whether the binary has non-POSIX extensions enabled.
 # Specifically, test whether double-colon rules are supported.
 unset PDPMAKE_POSIXLY_CORRECT
+unset MAKEFLAGS
 export OPTIONFLAGS=":"
 if ../make -f - 2>/dev/null <<EOF
 target::
