@@ -1,14 +1,13 @@
 ### Public domain POSIX make
 
-This is an implementation of [POSIX make](https://pubs.opengroup.org/onlinepubs/9699919799/utilities/make.html).  (The link may refer to the older 2017
-standard: it's the 2024 revision that's supported.)
+This is an implementation of [POSIX make](https://pubs.opengroup.org/onlinepubs/9799919799/utilities/make.html).
 
 It should build on most modernish Unix-style systems:
 
  - It comes with its own makefile, naturally, but if you don't have a `make` binary already the command `cc -o make *.c` should get you started.
 
  - Command line options may not work properly due to differences in how `getopt(3)` is reset.  Adjust `GETOPT_RESET()` in make.h for your platform, if necessary.
- 
+
  - Building on MacOS may require a command like: `make CFLAGS="-D_DARWIN_C_SOURCE -Dst_mtim=st_mtimespec"`
 
 Microsoft Windows users will find `pdpmake` included in the
