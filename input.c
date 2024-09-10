@@ -352,15 +352,10 @@ expand_macros(const char *str, int except_dollar)
 /*
  * Process a non-command line
  */
-static char *
+static void
 process_line(char *s)
 {
-	char *r, *t;
-
-	// Skip leading blanks
-	while (isblank(*s))
-		s++;
-	r = s;
+	char *t;
 
 	// Strip comment
 #if ENABLE_FEATURE_MAKE_EXTENSIONS
@@ -395,8 +390,6 @@ process_line(char *s)
 		}
 	}
 	*t = '\0';
-
-	return r;
 }
 
 #if ENABLE_FEATURE_MAKE_EXTENSIONS
@@ -479,8 +472,8 @@ skip_line(const char *str1)
 	// Default is to return skip flag for current level
 	int ret = cstate[clevel] & SKIP_LINE;
 
-	copy = xstrdup(str1);
-	q = process_line(copy);
+	q = copy = xstrdup(str1);
+	process_line(copy);
 	if ((token = gettok(&q)) != NULL) {
 		if (strcmp(token, "endif") == 0) {
 			if (gettok(&q) != NULL)
@@ -956,8 +949,6 @@ input(FILE *fd, int ilevel)
 	str1 = readline(fd, FALSE);
 	while (str1) {
 		str2 = NULL;
-		if (*str1 == '\t')	// Command without target
-			error("command not allowed here");
 
 		// Newlines and comments are handled differently in command lines
 		// and other types of line.  Take a copy of the current line before
@@ -967,9 +958,15 @@ input(FILE *fd, int ilevel)
 		//   target: prereq; command
 		//
 		copy = xstrdup(str1);
-		str = process_line(str1);
+		process_line(str1);
+		str = str1;
 
 		// Check for an include line
+# if ENABLE_FEATURE_MAKE_EXTENSIONS
+		if (!posix)
+			while (isblank(*str))
+				++str;
+#endif
 #if ENABLE_FEATURE_MAKE_POSIX_2024
 		minus = !POSIX_2017 && *str == '-';
 #endif
@@ -1028,6 +1025,13 @@ input(FILE *fd, int ilevel)
 		}
 
 		// Check for a macro definition
+		str = str1;
+#if ENABLE_FEATURE_MAKE_EXTENSIONS || ENABLE_FEATURE_MAKE_POSIX_2024
+		// POSIX 2024 seems to allow a tab as the first character of
+		// a macro definition, though most implementations don't.
+		if (POSIX_2017 && *str == '\t')
+			error("command not allowed here");
+#endif
 		if (find_char(str, '=') != NULL) {
 			int level = (useenv || fd == NULL) ? 4 : 3;
 			// Use a copy of the line:  we might need the original
@@ -1150,6 +1154,8 @@ input(FILE *fd, int ilevel)
 
 		// If we get here it must be a target rule
  try_target:
+		if (*str == '\t')	// Command without target
+			error("command not allowed here");
 		p = expanded = expand_macros(str, FALSE);
 
 		// Look for colon separator
