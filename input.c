@@ -978,11 +978,15 @@ input(FILE *fd, int ilevel)
 			if (ilevel > 16)
 				error("too many includes");
 
+#if ENABLE_FEATURE_MAKE_POSIX_2024
+			count = 0;
+#endif
 			q = expanded = expand_macros(p + 7, FALSE);
 			while ((p = gettok(&q)) != NULL) {
 				FILE *ifd;
 
 #if ENABLE_FEATURE_MAKE_POSIX_2024
+				++count;
 				if (!POSIX_2017) {
 					// Try to create include file or bring it up-to-date
 					opts |= OPT_include;
@@ -990,13 +994,15 @@ input(FILE *fd, int ilevel)
 					opts &= ~OPT_include;
 				}
 #endif
-				makefile = p;
 				if ((ifd = fopen(p, "r")) == NULL) {
 					if (!minus)
 						error("can't open include file '%s'", p);
 				} else {
+					makefile = p;
 					input(ifd, ilevel + 1);
 					fclose(ifd);
+					makefile = old_makefile;
+					lineno = old_lineno;
 				}
 #if ENABLE_FEATURE_MAKE_POSIX_2024
 				if (POSIX_2017)
@@ -1010,7 +1016,7 @@ input(FILE *fd, int ilevel)
 				if (p == NULL || gettok(&q)) {
 					error("one include file per line");
 				}
-			} else if (makefile == old_makefile) {
+			} else if (count == 0) {
 				// In POSIX 2024 no include file is unspecified behaviour.
 # if ENABLE_FEATURE_MAKE_EXTENSIONS
 				if (posix)
@@ -1018,9 +1024,6 @@ input(FILE *fd, int ilevel)
 					error("no include file");
 			}
 #endif
-
-			makefile = old_makefile;
-			lineno = old_lineno;
 			goto end_loop;
 		}
 
