@@ -1,4 +1,4 @@
-.TH PDPMAKE 1 "18 June 2024" "Ron Yorston" "Usage Manual"
+.TH PDPMAKE 1 "18 September 2024" "Ron Yorston" "Usage Manual"
 .SH NAME
 .B pdpmake
 \(en public domain POSIX make
@@ -237,8 +237,8 @@ An
 .B include
 line with no files specified is silently ignored. At least one blank must follow
 the
-.B include for the line to
-be valid.
+.B include
+for the line to be valid.
 .IP \(bu 3
 The shell used to process build commands isn\(cqt started with the
 .B -e
@@ -254,6 +254,15 @@ and
 internal macros are given values in target rules.
 .IP \(bu 3
 When a build command receives a signal, the target is removed.
+.IP \(bu 3
+Inference rules and the
+.B .DEFAULT
+target aren't used for phony targets.
+.IP \(bu 3
+Pragmas are propagated to recursive invocations of
+.B pdpmake.
+
+
 .RE
 
 The following implementation details apply only to the POSIX.1-2024 standard:
