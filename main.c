@@ -594,6 +594,11 @@ main(int argc, char **argv)
 
 	fp = makefiles;
 	if (!fp) {	// Look for a default Makefile
+#if ENABLE_FEATURE_MAKE_EXTENSIONS
+		if (!posix && (ifd = fopen("PDPmakefile", "r")) != NULL)
+			makefile = "PDPmakefile";
+		else
+#endif
 		if ((ifd = fopen("makefile", "r")) != NULL)
 			makefile = "makefile";
 		else if ((ifd = fopen("Makefile", "r")) != NULL)
