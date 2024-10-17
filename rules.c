@@ -66,14 +66,34 @@ dyndep(struct name *np, struct rule *imprule)
 			newsuff = dp->d_name->n_name;
 			sp = namecat(newsuff, suff, FALSE);
 			if (sp && sp->n_rule) {
+				struct name *ip;
+				int got_ip;
+
+#if ENABLE_FEATURE_MAKE_EXTENSIONS
+				// Has rule already been used in this chain?
+				if ((sp->n_flag & N_MARK))
+					continue;
+#endif
 				// Generate a name for an implicit prerequisite
-				struct name *ip = namecat(base, newsuff, TRUE);
+				ip = namecat(base, newsuff, TRUE);
 				if ((ip->n_flag & N_DOING))
 					continue;
+
 				if (!ip->n_tim.tv_sec)
 					modtime(ip);
-				if (!chain ? ip->n_tim.tv_sec || (ip->n_flag & N_TARGET) :
-							dyndep(ip, NULL) != NULL) {
+
+				if (!chain) {
+					got_ip = ip->n_tim.tv_sec || (ip->n_flag & N_TARGET);
+				}
+#if ENABLE_FEATURE_MAKE_EXTENSIONS
+				else {
+					sp->n_flag |= N_MARK;
+					got_ip = dyndep(ip, NULL) != NULL;
+					sp->n_flag &= ~N_MARK;
+				}
+#endif
+
+				if (got_ip) {
 					// Prerequisite exists or we know how to make it
 					if (imprule) {
 						imprule->r_dep = newdep(ip, NULL);
