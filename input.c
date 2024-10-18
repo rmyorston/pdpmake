@@ -630,7 +630,11 @@ readline(FILE *fd, int want_command)
 			while (isblank(*p))
 				p++;
 
+#if ENABLE_FEATURE_MAKE_EXTENSIONS
+			if (*p != '\n' && (posix ? *str != '#' : *p != '#'))
+#else
 			if (*p != '\n' && *str != '#')
+#endif
 				return str;
 		}
 
