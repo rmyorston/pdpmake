@@ -59,6 +59,12 @@ error_in_inference_rule(const char *s)
 }
 
 void
+error_not_allowed(const char *s, const char *t)
+{
+	error("%s not allowed for %s", s, t);
+}
+
+void
 warning(const char *msg, ...)
 {
 	va_list list;

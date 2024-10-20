@@ -347,6 +347,7 @@ void diagnostic(const char *msg, ...);
 void error(const char *msg, ...) NORETURN;
 void error_unexpected(const char *s) NORETURN;
 void error_in_inference_rule(const char *s) NORETURN;
+void error_not_allowed(const char *s, const char *t);
 void warning(const char *msg, ...);
 void *xmalloc(size_t len);
 void *xrealloc(void *ptr, size_t len);
