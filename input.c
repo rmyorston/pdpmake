@@ -1285,13 +1285,21 @@ input(FILE *fd, int ilevel)
 
 				np = newname(p);
 				if (ttype != T_NORMAL) {
-					if (ttype == T_INFERENCE
-							IF_FEATURE_MAKE_EXTENSIONS(&& posix)) {
-						if (semicolon_cmd)
-							error_in_inference_rule("'; command'");
-						seen_inference = TRUE;
+					if (ttype == T_INFERENCE) {
+						if (IF_FEATURE_MAKE_EXTENSIONS(posix &&) 1) {
+							if (semicolon_cmd)
+								error_in_inference_rule("'; command'");
+							seen_inference = TRUE;
+						}
+						np->n_flag |= N_INFERENCE;
+#if ENABLE_FEATURE_MAKE_EXTENSIONS
+					} else if (strcmp(p, ".DEFAULT") == 0) {
+						// .DEFAULT rule is a special case
+						np->n_flag |= N_SPECIAL | N_INFERENCE;
+#endif
+					} else {
+						np->n_flag |= N_SPECIAL;
 					}
-					np->n_flag |= N_SPECIAL;
 				} else if (!firstname) {
 					firstname = np;
 				}
@@ -1304,7 +1312,7 @@ input(FILE *fd, int ilevel)
 				globfree(&gd);
 #endif
 		}
-		if (seen_inference && count != 1)
+		if (IF_FEATURE_MAKE_EXTENSIONS(posix &&) seen_inference && count != 1)
 			error_in_inference_rule("multiple targets");
 
 		// Prerequisites and commands will be unused if there were

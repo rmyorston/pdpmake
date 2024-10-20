@@ -370,7 +370,12 @@ addrule(struct name *np, struct depend *dp, struct cmd *cp, int flag)
 
 	if (cp && !(np->n_flag & N_DOUBLE) && getcmd(np)) {
 		// Handle the inference rule redefinition case
-		if ((np->n_flag & N_SPECIAL) && !dp) {
+		// .DEFAULT rule can also be redefined (as an extension).
+		if ((np->n_flag & N_INFERENCE)
+#if ENABLE_FEATURE_MAKE_EXTENSIONS
+				&& !(posix && (np->n_flag & N_SPECIAL))
+#endif
+		) {
 			freerules(np->n_rule);
 			np->n_rule = NULL;
 		} else {

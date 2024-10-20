@@ -213,6 +213,7 @@ struct name {
 #else
 #define N_PHONY		0		// No support for phony targets
 #endif
+#define N_INFERENCE	0x400	// Inference rule
 
 // List of rules to build a target
 struct rule {

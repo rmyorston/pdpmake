@@ -16,18 +16,6 @@ target:
 	@echo target
 '
 
-# .DEFAULT rules with no commands or some prerequisites are ignored.
-# .DEFAULT rules with commands can be redefined.
-testing ".DEFAULT rule" \
-	"make -f - default" "default2\n" "" '
-.DEFAULT: ignored
-.DEFAULT:
-	@echo default1
-.DEFAULT:
-	@echo default2
-target:
-'
-
 testing ".DEFAULT rule for prerequisite" \
 	"make -f - 2>/dev/null" "source\n" "" '
 .DEFAULT:
@@ -552,6 +540,18 @@ SKIP=
 # =================================================================
 
 optional FEATURE_MAKE_EXTENSIONS
+# .DEFAULT rules with no commands or some prerequisites are ignored.
+# .DEFAULT rules with commands can be redefined.
+testing ".DEFAULT rule" \
+	"make -f - default" "default2\n" "" '
+.DEFAULT: ignored
+.DEFAULT:
+	@echo default1
+.DEFAULT:
+	@echo default2
+target:
+'
+
 testing "Double-colon rule" \
 	"make -f -" "target1\ntarget2\n" "" '
 target::
