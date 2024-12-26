@@ -723,20 +723,23 @@ target_type(char *s)
 			return s_type[ret];
 
 	// Check for an inference rule
-	ret = T_NORMAL;
-	sfx = suffix(s);
-	if (is_suffix(sfx)) {
-		if (s == sfx) {	// Single suffix rule
-			ret = T_INFERENCE | T_NOPREREQ | T_COMMAND;
-		} else {
-			// Suffix is valid, check that prefix is too
-			*sfx = '\0';
-			if (is_suffix(s))
-				ret = T_INFERENCE | T_NOPREREQ | T_COMMAND;
-			*sfx = '.';
-		}
+	for (sfx = s; (sfx = strchr(sfx + 1, '.'));) {
+		if (!is_suffix(sfx))
+			continue;
+
+		// Suffix is valid, check that prefix is too
+		*sfx = '\0';
+		ret = is_suffix(s);
+		*sfx = '.';
+
+		if (ret)
+			return T_INFERENCE | T_NOPREREQ | T_COMMAND;
 	}
-	return ret;
+
+	if (is_suffix(s)) // Single suffix rule
+		return T_INFERENCE | T_NOPREREQ | T_COMMAND;
+
+	return T_NORMAL;
 }
 
 #if ENABLE_FEATURE_MAKE_EXTENSIONS

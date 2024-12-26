@@ -100,6 +100,19 @@ x.p:
 '
 cd .. || exit 1; rm -rf make.tempdir 2>/dev/null
 
+# Suffixes with multiple dots are supported
+mkdir make.tempdir && cd make.tempdir || exit 1
+testing "Support multi-dot suffixes" \
+	"make -f -" "touch x.c.c\ncat x.c.c >x.o.o\n" "" '
+.SUFFIXES: .c.c .o.o
+x.o.o:
+x.c.c:
+	touch $@
+.c.c.o.o:
+	cat $< >$@
+'
+cd .. || exit 1; rm -rf make.tempdir 2>/dev/null
+
 # Austin Group defect report 875 clarifies certain aspects of the
 # behaviour of inference rules.  Study of this resulted in a number
 # of changes to pdpmake, though this test passed anyway.

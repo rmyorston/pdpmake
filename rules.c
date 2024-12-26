@@ -10,7 +10,7 @@
 char *
 suffix(const char *name)
 {
-	char *p = strrchr(name, '.');
+	char *p = strchr(name, '.');
 	return p ? p : (char *)name + strlen(name);
 }
 
