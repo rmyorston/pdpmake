@@ -104,6 +104,26 @@ dyndep0(char *base, const char *tsuff, struct rule *infrule)
 	return NULL;
 }
 
+#if ENABLE_FEATURE_MAKE_EXTENSIONS
+/*
+ * If 'name' ends with 'suffix' return an allocated string containing
+ * the name with the suffix removed, else return NULL.
+ */
+static char *
+has_suffix(const char *name, const char *suffix)
+{
+	ssize_t delta = strlen(name) - strlen(suffix);
+	char *base = NULL;
+
+	if (delta > 0 && strcmp(name + delta, suffix) == 0) {
+		base = xstrdup(name);
+		base[delta] = '\0';
+	}
+
+	return base;
+}
+#endif
+
 /*
  * Dynamic dependency.  This routine applies the suffix rules
  * to try and find a source and a set of rules for a missing
@@ -116,17 +136,44 @@ dyndep(struct name *np, struct rule *infrule)
 {
 	char *tsuff;
 	char *base, *name, *member;
-	struct name *pp;	// Implicit prerequisite
+	struct name *pp = NULL;	// Implicit prerequisite
 
 	member = NULL;
 	name = splitlib(np->n_name, &member);
 
-	tsuff = xstrdup(suffix(name));
-	base = member ? member : name;
-	*suffix(base) = '\0';
+#if ENABLE_FEATURE_MAKE_EXTENSIONS
+	// POSIX only allows inference rules with one or two periods.
+	// As an extension this restriction is lifted, but not for
+	// targets of the form lib.a(member.o).
+	if (!posix && member == NULL) {
+		struct name *xp = newname(".SUFFIXES");
+		for (struct rule *rp = xp->n_rule; rp; rp = rp->r_next) {
+			for (struct depend *dp = rp->r_dep; dp; dp = dp->d_next) {
+				tsuff = dp->d_name->n_name;
+				base = has_suffix(name, tsuff);
+				if (base) {
+					pp = dyndep0(base, tsuff, infrule);
+					free(base);
+					if (pp) {
+						goto done;
+					}
+				}
+			}
+		}
 
-	pp = dyndep0(base, tsuff, infrule);
-	free(tsuff);
+	} else
+#endif
+	{
+		tsuff = xstrdup(suffix(name));
+		base = member ? member : name;
+		*suffix(base) = '\0';
+
+		pp = dyndep0(base, tsuff, infrule);
+		free(tsuff);
+	}
+#if ENABLE_FEATURE_MAKE_EXTENSIONS
+ done:
+#endif
 	free(name);
 
 	return pp;
