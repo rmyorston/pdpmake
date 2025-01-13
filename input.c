@@ -663,6 +663,40 @@ is_suffix(const char *s)
 	return FALSE;
 }
 
+#if ENABLE_FEATURE_MAKE_EXTENSIONS
+/*
+ * Return TRUE if the argument is formed by concatenating two
+ * known suffixes.
+ */
+int
+is_inference_target(const char *s)
+{
+	struct name *np;
+	struct rule *rp1, *rp2;
+	struct depend *dp1, *dp2;
+
+	np = newname(".SUFFIXES");
+	for (rp1 = np->n_rule; rp1; rp1 = rp1->r_next) {
+		for (dp1 = rp1->r_dep; dp1; dp1 = dp1->d_next) {
+			const char *suff1 = dp1->d_name->n_name;
+			size_t len = strlen(suff1);
+
+			if (strncmp(s, suff1, len) == 0) {
+				for (rp2 = np->n_rule; rp2; rp2 = rp2->r_next) {
+					for (dp2 = rp2->r_dep; dp2; dp2 = dp2->d_next) {
+						const char *suff2 = dp2->d_name->n_name;
+						if (strcmp(s + len, suff2) == 0) {
+							return TRUE;
+						}
+					}
+				}
+			}
+		}
+	}
+	return FALSE;
+}
+#endif
+
 enum {
 	T_NORMAL    =  0,
 	T_SPECIAL   = (1 << 0),
@@ -678,7 +712,6 @@ enum {
 static int
 target_type(char *s)
 {
-	char *sfx;
 	int ret;
 	static const char *s_name[] = {
 		".DEFAULT",
@@ -714,9 +747,6 @@ target_type(char *s)
 #endif
 	};
 
-	if (*s != '.')
-		return T_NORMAL;
-
 	// Check for one of the known special targets
 	for (ret = 0; ret < sizeof(s_name)/sizeof(s_name[0]); ret++)
 		if (strcmp(s_name[ret], s) == 0)
@@ -724,16 +754,26 @@ target_type(char *s)
 
 	// Check for an inference rule
 	ret = T_NORMAL;
-	sfx = suffix(s);
-	if (is_suffix(sfx)) {
-		if (s == sfx) {	// Single suffix rule
+#if ENABLE_FEATURE_MAKE_EXTENSIONS
+	if (!posix) {
+		if (is_suffix(s) || is_inference_target(s)) {
 			ret = T_INFERENCE | T_NOPREREQ | T_COMMAND;
-		} else {
-			// Suffix is valid, check that prefix is too
-			*sfx = '\0';
-			if (is_suffix(s))
+		}
+	} else
+#endif
+	{
+		// In POSIX inference rule targets must contain one or two dots
+		char *sfx = suffix(s);
+		if (*s == '.' && is_suffix(sfx)) {
+			if (s == sfx) {	// Single suffix rule
 				ret = T_INFERENCE | T_NOPREREQ | T_COMMAND;
-			*sfx = '.';
+			} else {
+				// Suffix is valid, check that prefix is too
+				*sfx = '\0';
+				if (is_suffix(s))
+					ret = T_INFERENCE | T_NOPREREQ | T_COMMAND;
+				*sfx = '.';
+			}
 		}
 	}
 	return ret;
