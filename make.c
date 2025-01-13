@@ -184,7 +184,7 @@ make1(struct name *np, struct cmd *cp, char *oodate, char *allsrc,
 
 #if ENABLE_FEATURE_MAKE_EXTENSIONS
 		// As an extension, if we're not dealing with an implicit
-		// rule set $< to the first out-of-date prerequisite.
+		// prerequisite set $< to the first out-of-date prerequisite.
 		if (implicit == NULL) {
 			if (oodate) {
 				s = strchr(oodate, ' ');
@@ -200,8 +200,8 @@ make1(struct name *np, struct cmd *cp, char *oodate, char *allsrc,
 		s = suffix(base);
 #if ENABLE_FEATURE_MAKE_EXTENSIONS
 		// As an extension, if we're not dealing with an implicit
-		// rule and the target ends with a known suffix, remove it
-		// and set $* to the stem, else to an empty string.
+		// prerequisite and the target ends with a known suffix,
+		// remove it and set $* to the stem, else to an empty string.
 		if (implicit == NULL && !is_suffix(s))
 			base = NULL;
 		else
@@ -251,7 +251,7 @@ make(struct name *np, int level)
 	struct depend *dp;
 	struct rule *rp;
 	struct name *impdep = NULL;	// implicit prerequisite
-	struct rule imprule;
+	struct rule infrule;
 	struct cmd *sc_cmd = NULL;	// commands for single-colon rule
 	char *oodate = NULL;
 #if ENABLE_FEATURE_MAKE_POSIX_2024
@@ -280,10 +280,10 @@ make(struct name *np, int level)
 				&& (posix || !(np->n_flag & N_PHONY))
 #endif
 				) {
-			impdep = dyndep(np, &imprule);
+			impdep = dyndep(np, &infrule);
 			if (impdep) {
-				sc_cmd = imprule.r_cmd;
-				addrule(np, imprule.r_dep, NULL, FALSE);
+				sc_cmd = infrule.r_cmd;
+				addrule(np, infrule.r_dep, NULL, FALSE);
 			}
 		}
 
@@ -310,7 +310,7 @@ make(struct name *np, int level)
 # if ENABLE_FEATURE_MAKE_POSIX_2024
 				if (posix || !(np->n_flag & N_PHONY))
 # endif
-					impdep = dyndep(np, &imprule);
+					impdep = dyndep(np, &infrule);
 				if (!impdep) {
 					if (doinclude)
 						return 1;
@@ -342,9 +342,9 @@ make(struct name *np, int level)
 			// If the rule has no commands use the inference rule.
 			if (!rp->r_cmd) {
 				locdep = impdep;
-				imprule.r_dep->d_next = rp->r_dep;
-				rp->r_dep = imprule.r_dep;
-				rp->r_cmd = imprule.r_cmd;
+				infrule.r_dep->d_next = rp->r_dep;
+				rp->r_dep = infrule.r_dep;
+				rp->r_cmd = infrule.r_cmd;
 			}
 			// A rule with no prerequisities is executed unconditionally.
 			if (!rp->r_dep)
@@ -403,7 +403,7 @@ make(struct name *np, int level)
 	}
 #if ENABLE_FEATURE_MAKE_EXTENSIONS
 	if ((np->n_flag & N_DOUBLE) && impdep)
-		free(imprule.r_dep);
+		free(infrule.r_dep);
 #endif
 
 	np->n_flag |= N_DONE;

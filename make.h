@@ -330,7 +330,7 @@ char *splitlib(const char *name, char **member);
 void modtime(struct name *np);
 char *suffix(const char *name);
 int is_suffix(const char *s);
-struct name *dyndep(struct name *np, struct rule *imprule);
+struct name *dyndep(struct name *np, struct rule *infrule);
 char *getrules(char *s, int size);
 struct name *findname(const char *name);
 struct name *newname(const char *name);

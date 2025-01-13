@@ -31,30 +31,19 @@ namecat(const char *s, const char *t, int create)
 }
 
 /*
- * Dynamic dependency.  This routine applies the suffix rules
- * to try and find a source and a set of rules for a missing
- * target.  NULL is returned on failure.  On success the name of
- * the implicit prerequisite is returned and the details are
- * placed in the imprule structure provided by the caller.
+ * Search for an inference rule to convert some suffix ('psuff')
+ * to the target suffix 'tsuff'.  The basename of the prerequisite
+ * is 'base'.
  */
 struct name *
-dyndep(struct name *np, struct rule *imprule)
+dyndep0(char *base, const char *tsuff, struct rule *infrule)
 {
-	char *suff, *newsuff;
-	char *base, *name, *member;
+	char *psuff;
 	struct name *xp;		// Suffixes
 	struct name *sp;		// Suffix rule
-	struct name *pp = NULL;	// Implicit prerequisite
 	struct rule *rp;
 	struct depend *dp;
 	IF_NOT_FEATURE_MAKE_EXTENSIONS(const) bool chain = FALSE;
-
-	member = NULL;
-	name = splitlib(np->n_name, &member);
-
-	suff = xstrdup(suffix(name));
-	base = member ? member : name;
-	*suffix(base) = '\0';
 
 	xp = newname(".SUFFIXES");
 #if ENABLE_FEATURE_MAKE_EXTENSIONS
@@ -63,8 +52,8 @@ dyndep(struct name *np, struct rule *imprule)
 	for (rp = xp->n_rule; rp; rp = rp->r_next) {
 		for (dp = rp->r_dep; dp; dp = dp->d_next) {
 			// Generate new suffix rule to try
-			newsuff = dp->d_name->n_name;
-			sp = namecat(newsuff, suff, FALSE);
+			psuff = dp->d_name->n_name;
+			sp = namecat(psuff, tsuff, FALSE);
 			if (sp && sp->n_rule) {
 				struct name *ip;
 				int got_ip;
@@ -75,7 +64,7 @@ dyndep(struct name *np, struct rule *imprule)
 					continue;
 #endif
 				// Generate a name for an implicit prerequisite
-				ip = namecat(base, newsuff, TRUE);
+				ip = namecat(base, psuff, TRUE);
 				if ((ip->n_flag & N_DOING))
 					continue;
 
@@ -95,12 +84,11 @@ dyndep(struct name *np, struct rule *imprule)
 
 				if (got_ip) {
 					// Prerequisite exists or we know how to make it
-					if (imprule) {
-						imprule->r_dep = newdep(ip, NULL);
-						imprule->r_cmd = sp->n_rule->r_cmd;
+					if (infrule) {
+						infrule->r_dep = newdep(ip, NULL);
+						infrule->r_cmd = sp->n_rule->r_cmd;
 					}
-					pp = ip;
-					goto finish;
+					return ip;
 				}
 			}
 		}
@@ -113,9 +101,34 @@ dyndep(struct name *np, struct rule *imprule)
 		goto retry;
 	}
 #endif
- finish:
-	free(suff);
+	return NULL;
+}
+
+/*
+ * Dynamic dependency.  This routine applies the suffix rules
+ * to try and find a source and a set of rules for a missing
+ * target.  NULL is returned on failure.  On success the name of
+ * the implicit prerequisite is returned and the rule used is
+ * placed in the infrule structure provided by the caller.
+ */
+struct name *
+dyndep(struct name *np, struct rule *infrule)
+{
+	char *tsuff;
+	char *base, *name, *member;
+	struct name *pp;	// Implicit prerequisite
+
+	member = NULL;
+	name = splitlib(np->n_name, &member);
+
+	tsuff = xstrdup(suffix(name));
+	base = member ? member : name;
+	*suffix(base) = '\0';
+
+	pp = dyndep0(base, tsuff, infrule);
+	free(tsuff);
 	free(name);
+
 	return pp;
 }
 
