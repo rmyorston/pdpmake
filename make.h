@@ -319,6 +319,9 @@ void print_details(void);
 #if !ENABLE_FEATURE_MAKE_POSIX_2024
 #define expand_macros(s, e) expand_macros(s)
 #endif
+#if !ENABLE_FEATURE_MAKE_EXTENSIONS
+#define dyndep(n, i, p) dyndep(n, i)
+#endif
 char *expand_macros(const char *str, int except_dollar);
 void input(FILE *fd, int ilevel);
 struct macro *getmp(const char *name);
@@ -329,8 +332,9 @@ int make(struct name *np, int level);
 char *splitlib(const char *name, char **member);
 void modtime(struct name *np);
 char *suffix(const char *name);
-int is_suffix(const char *s);
-struct name *dyndep(struct name *np, struct rule *infrule);
+const char *is_suffix(const char *s);
+char *has_suffix(const char *name, const char *suffix);
+struct name *dyndep(struct name *np, struct rule *infrule, const char **ptsuff);
 char *getrules(char *s, int size);
 struct name *findname(const char *name);
 struct name *newname(const char *name);

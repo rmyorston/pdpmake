@@ -77,7 +77,7 @@ dyndep0(char *base, const char *tsuff, struct rule *infrule)
 #if ENABLE_FEATURE_MAKE_EXTENSIONS
 				else {
 					sp->n_flag |= N_MARK;
-					got_ip = dyndep(ip, NULL) != NULL;
+					got_ip = dyndep(ip, NULL, NULL) != NULL;
 					sp->n_flag &= ~N_MARK;
 				}
 #endif
@@ -109,7 +109,7 @@ dyndep0(char *base, const char *tsuff, struct rule *infrule)
  * If 'name' ends with 'suffix' return an allocated string containing
  * the name with the suffix removed, else return NULL.
  */
-static char *
+char *
 has_suffix(const char *name, const char *suffix)
 {
 	ssize_t delta = strlen(name) - strlen(suffix);
@@ -132,9 +132,9 @@ has_suffix(const char *name, const char *suffix)
  * placed in the infrule structure provided by the caller.
  */
 struct name *
-dyndep(struct name *np, struct rule *infrule)
+dyndep(struct name *np, struct rule *infrule, const char **ptsuff)
 {
-	char *tsuff;
+	const char *tsuff;
 	char *base, *name, *member;
 	struct name *pp = NULL;	// Implicit prerequisite
 
@@ -155,6 +155,8 @@ dyndep(struct name *np, struct rule *infrule)
 					pp = dyndep0(base, tsuff, infrule);
 					free(base);
 					if (pp) {
+						if (ptsuff)
+							*ptsuff = tsuff;
 						goto done;
 					}
 				}
@@ -169,7 +171,7 @@ dyndep(struct name *np, struct rule *infrule)
 		*suffix(base) = '\0';
 
 		pp = dyndep0(base, tsuff, infrule);
-		free(tsuff);
+		free((void *)tsuff);
 	}
 #if ENABLE_FEATURE_MAKE_EXTENSIONS
  done:

@@ -643,9 +643,10 @@ readline(FILE *fd, int want_command)
 }
 
 /*
- * Return TRUE if the argument is a known suffix.
+ * Return a pointer to the suffix name if the argument is a known suffix
+ * or NULL if it isn't.
  */
-int
+const char *
 is_suffix(const char *s)
 {
 	struct name *np;
@@ -656,11 +657,11 @@ is_suffix(const char *s)
 	for (rp = np->n_rule; rp; rp = rp->r_next) {
 		for (dp = rp->r_dep; dp; dp = dp->d_next) {
 			if (strcmp(s, dp->d_name->n_name) == 0) {
-				return TRUE;
+				return dp->d_name->n_name;
 			}
 		}
 	}
-	return FALSE;
+	return NULL;
 }
 
 #if ENABLE_FEATURE_MAKE_EXTENSIONS

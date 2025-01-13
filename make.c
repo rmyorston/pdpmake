@@ -160,12 +160,16 @@ docmds(struct name *np, struct cmd *cp)
 	return estat;
 }
 
-#if !ENABLE_FEATURE_MAKE_POSIX_2024
-# define make1(n, c, o, a, d, i) make1(n, c, o, i)
+#if !ENABLE_FEATURE_MAKE_POSIX_2024 && !ENABLE_FEATURE_MAKE_EXTENSIONS
+# define make1(n, c, o, a, d, i, t) make1(n, c, o, i)
+#elif ENABLE_FEATURE_MAKE_POSIX_2024 && !ENABLE_FEATURE_MAKE_EXTENSIONS
+# define make1(n, c, o, a, d, i, t) make1(n, c, a, d, o, i)
+#elif !ENABLE_FEATURE_MAKE_POSIX_2024 && ENABLE_FEATURE_MAKE_EXTENSIONS
+# define make1(n, c, o, a, d, i, t) make1(n, c, o, i, t)
 #endif
 static int
 make1(struct name *np, struct cmd *cp, char *oodate, char *allsrc,
-		char *dedup, struct name *implicit)
+		char *dedup, struct name *implicit, const char *tsuff)
 {
 	char *name, *member = NULL, *base = NULL, *prereq = NULL;
 
@@ -196,18 +200,49 @@ make1(struct name *np, struct cmd *cp, char *oodate, char *allsrc,
 #endif
 			prereq = implicit->n_name;
 
-		base = member ? member : name;
-		s = suffix(base);
 #if ENABLE_FEATURE_MAKE_EXTENSIONS
-		// As an extension, if we're not dealing with an implicit
-		// prerequisite and the target ends with a known suffix,
-		// remove it and set $* to the stem, else to an empty string.
-		if (implicit == NULL && !is_suffix(s))
-			base = NULL;
-		else
+		if (!posix && member == NULL) {
+			// As an extension remove the suffix from a target, either
+			// that obtained by an inference rule or one of the known
+			// suffixes.  Not for targets of the form lib.a(member.o).
+			if (tsuff != NULL) {
+				base = has_suffix(name, tsuff);
+				if (base) {
+					free(name);
+					name = base;
+				}
+			} else {
+				struct name *np = newname(".SUFFIXES");
+				for (struct rule *rp = np->n_rule; rp; rp = rp->r_next) {
+					for (struct depend *dp = rp->r_dep; dp; dp = dp->d_next) {
+						base = has_suffix(name, dp->d_name->n_name);
+						if (base) {
+							free(name);
+							name = base;
+							goto done;
+						}
+					}
+				}
+			}
+		} else
 #endif
-			*s = '\0';
+		{
+			base = member ? member : name;
+			s = suffix(base);
+#if ENABLE_FEATURE_MAKE_EXTENSIONS
+			// As an extension, if we're not dealing with an implicit
+			// prerequisite and the target ends with a known suffix,
+			// remove it and set $* to the stem, else to an empty string.
+			if (implicit == NULL && !is_suffix(s))
+				base = NULL;
+			else
+#endif
+				*s = '\0';
+		}
 	}
+#if ENABLE_FEATURE_MAKE_EXTENSIONS
+ done:
+#endif
 	setmacro("<", prereq, 0 | M_VALID);
 	setmacro("*", base, 0 | M_VALID);
 	free(name);
@@ -258,6 +293,9 @@ make(struct name *np, int level)
 	char *allsrc = NULL;
 	char *dedup = NULL;
 #endif
+#if ENABLE_FEATURE_MAKE_EXTENSIONS
+	const char *tsuff = NULL;
+#endif
 	struct timespec dtim = {1, 0};
 	int estat = 0;
 
@@ -280,7 +318,7 @@ make(struct name *np, int level)
 				&& (posix || !(np->n_flag & N_PHONY))
 #endif
 				) {
-			impdep = dyndep(np, &infrule);
+			impdep = dyndep(np, &infrule, &tsuff);
 			if (impdep) {
 				sc_cmd = infrule.r_cmd;
 				addrule(np, infrule.r_dep, NULL, FALSE);
@@ -310,7 +348,7 @@ make(struct name *np, int level)
 # if ENABLE_FEATURE_MAKE_POSIX_2024
 				if (posix || !(np->n_flag & N_PHONY))
 # endif
-					impdep = dyndep(np, &infrule);
+					impdep = dyndep(np, &infrule, &tsuff);
 				if (!impdep) {
 					if (doinclude)
 						return 1;
@@ -383,7 +421,7 @@ make(struct name *np, int level)
 			if (((np->n_flag & N_PHONY) || timespec_le(&np->n_tim, &dtim))) {
 				if (!(estat & MAKE_FAILURE)) {
 					estat |= make1(np, rp->r_cmd, oodate, allsrc,
-										dedup, locdep);
+										dedup, locdep, tsuff);
 					dtim = (struct timespec){1, 0};
 				}
 				free(oodate);
@@ -413,7 +451,8 @@ make(struct name *np, int level)
 				((np->n_flag & N_PHONY) || (timespec_le(&np->n_tim, &dtim)))) {
 		if (!(estat & MAKE_FAILURE)) {
 			if (sc_cmd)
-				estat |= make1(np, sc_cmd, oodate, allsrc, dedup, impdep);
+				estat |= make1(np, sc_cmd, oodate, allsrc, dedup,
+								impdep, tsuff);
 			else if (!doinclude && level == 0 && !(estat & MAKE_DIDSOMETHING))
 				warning("nothing to be done for %s", np->n_name);
 		} else if (!doinclude && !quest) {
