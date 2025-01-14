@@ -212,8 +212,8 @@ make1(struct name *np, struct cmd *cp, char *oodate, char *allsrc,
 					name = base;
 				}
 			} else {
-				struct name *np = newname(".SUFFIXES");
-				for (struct rule *rp = np->n_rule; rp; rp = rp->r_next) {
+				struct name *xp = newname(".SUFFIXES");
+				for (struct rule *rp = xp->n_rule; rp; rp = rp->r_next) {
 					for (struct depend *dp = rp->r_dep; dp; dp = dp->d_next) {
 						base = has_suffix(name, dp->d_name->n_name);
 						if (base) {
