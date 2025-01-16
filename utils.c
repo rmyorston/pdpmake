@@ -113,8 +113,14 @@ xconcat3(const char *s1, const char *s2, const char *s3)
 char *
 xstrdup(const char *s)
 {
-	size_t len = strlen(s) + 1;
-	char *t = xmalloc(len);
+	size_t len;
+	char *t;
+
+	if (s == NULL)
+		return NULL;
+
+	len = strlen(s) + 1;
+	t = xmalloc(len);
 	return memcpy(t, s, len);
 }
 

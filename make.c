@@ -160,6 +160,33 @@ docmds(struct name *np, struct cmd *cp)
 	return estat;
 }
 
+#if ENABLE_FEATURE_MAKE_EXTENSIONS
+/*
+ * Remove the suffix from a name, either the one provided in 'tsuff'
+ * or, if 'tsuff' is NULL, one of the known suffixes.
+ */
+static char *
+remove_suffix(const char *name, const char *tsuff)
+{
+	char *base = NULL;
+
+	if (tsuff != NULL) {
+		base = has_suffix(name, tsuff);
+	} else {
+		struct name *xp = newname(".SUFFIXES");
+		for (struct rule *rp = xp->n_rule; rp; rp = rp->r_next) {
+			for (struct depend *dp = rp->r_dep; dp; dp = dp->d_next) {
+				base = has_suffix(name, dp->d_name->n_name);
+				if (base) {
+					return base;
+				}
+			}
+		}
+	}
+	return base;
+}
+#endif
+
 #if !ENABLE_FEATURE_MAKE_POSIX_2024 && !ENABLE_FEATURE_MAKE_EXTENSIONS
 # define make1(n, c, o, a, d, i, t) make1(n, c, o, i)
 #elif ENABLE_FEATURE_MAKE_POSIX_2024 && !ENABLE_FEATURE_MAKE_EXTENSIONS
@@ -202,27 +229,13 @@ make1(struct name *np, struct cmd *cp, char *oodate, char *allsrc,
 
 #if ENABLE_FEATURE_MAKE_EXTENSIONS
 		if (!posix && member == NULL) {
-			// As an extension remove the suffix from a target, either
-			// that obtained by an inference rule or one of the known
-			// suffixes.  Not for targets of the form lib.a(member.o).
-			if (tsuff != NULL) {
-				base = has_suffix(name, tsuff);
-				if (base) {
-					free(name);
-					name = base;
-				}
-			} else {
-				struct name *xp = newname(".SUFFIXES");
-				for (struct rule *rp = xp->n_rule; rp; rp = rp->r_next) {
-					for (struct depend *dp = rp->r_dep; dp; dp = dp->d_next) {
-						base = has_suffix(name, dp->d_name->n_name);
-						if (base) {
-							free(name);
-							name = base;
-							goto done;
-						}
-					}
-				}
+			// As an extension remove a suffix that doesn't necessarily
+			// start with a period from a target, but not for targets
+			// of the form lib.a(member.o).
+			base = remove_suffix(name, tsuff);
+			if (base) {
+				free(name);
+				name = base;
 			}
 		} else
 #endif
@@ -240,9 +253,6 @@ make1(struct name *np, struct cmd *cp, char *oodate, char *allsrc,
 				*s = '\0';
 		}
 	}
-#if ENABLE_FEATURE_MAKE_EXTENSIONS
- done:
-#endif
 	setmacro("<", prereq, 0 | M_VALID);
 	setmacro("*", base, 0 | M_VALID);
 	free(name);
