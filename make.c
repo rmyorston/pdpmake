@@ -352,13 +352,15 @@ make(struct name *np, int level)
 #if ENABLE_FEATURE_MAKE_EXTENSIONS
 	else {
 		// If any double-colon rule has no commands we need
-		// an inference rule (but, as an extension, not for phony targets)
+		// an inference rule.
 		for (rp = np->n_rule; rp; rp = rp->r_next) {
 			if (!rp->r_cmd) {
 # if ENABLE_FEATURE_MAKE_POSIX_2024
-				if (posix || !(np->n_flag & N_PHONY))
+				// Phony targets don't need an inference rule.
+				if (!posix && (np->n_flag & N_PHONY))
+					continue;
 # endif
-					impdep = dyndep(np, &infrule, &tsuff);
+				impdep = dyndep(np, &infrule, &tsuff);
 				if (!impdep) {
 					if (doinclude)
 						return 1;
@@ -388,11 +390,17 @@ make(struct name *np, int level)
 		// Each double-colon rule is handled separately.
 		if ((np->n_flag & N_DOUBLE)) {
 			// If the rule has no commands use the inference rule.
+			// Unless there isn't one, as allowed for phony targets.
 			if (!rp->r_cmd) {
-				locdep = impdep;
-				infrule.r_dep->d_next = rp->r_dep;
-				rp->r_dep = infrule.r_dep;
-				rp->r_cmd = infrule.r_cmd;
+# if ENABLE_FEATURE_MAKE_POSIX_2024
+				if (impdep)
+# endif
+				{
+					locdep = impdep;
+					infrule.r_dep->d_next = rp->r_dep;
+					rp->r_dep = infrule.r_dep;
+					rp->r_cmd = infrule.r_cmd;
+				}
 			}
 			// A rule with no prerequisities is executed unconditionally.
 			if (!rp->r_dep)
