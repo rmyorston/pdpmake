@@ -1,4 +1,4 @@
-.TH PDPMAKE 1 "18 September 2024" "Ron Yorston" "Usage Manual"
+.TH PDPMAKE 1 "19 January 2025" "Ron Yorston" "Usage Manual"
 .SH NAME
 .B pdpmake
 \(en public domain POSIX make
@@ -210,6 +210,9 @@ The macro assignment operator
 is implemented. It is equivalent to the POSIX-specified
 .BR ::=
 macro assignment operator.
+.IP \(bu 3
+The suffixes used in the definition of inference rules can contain any
+number of periods or none.
 .IP \(bu 3
 Chained inference rules can be used when searching for the prerequisites of a
 target. This means that if there are inference rules
