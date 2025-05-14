@@ -23,7 +23,8 @@ done
 ## Body ##
 ################################
 
-set -- check.c input.c macro.c main.c make.c modtime.c rules.c target.c utils.c
+# grab source files from Makefile
+set -- $(cat Makefile | sed '/OBJS.*=/!d; s/.*=\s*//; s/\.o/\.c/g)
 
 tmp="$@"
 
