@@ -33,16 +33,10 @@ while [ "$#" -gt 1 ]; do
 
     # build object code
     set -e
-    $CC $LDFLAGS $CFLAGS -c $source -o $object
+    $CC $CFLAGS $CPPFLAGS -c $source -o $object
     set +e
 
     shift
 done
 
- $("$tmp" | sed 's/.c/.o')
-
-
-
-
-# final binary
-$CC $LDFLAGS -o make $OBJS
+$CC $CFLAGS $LDFLAGS -o make $(printf "$tmp" | sed 's/\.c/\.o/')
