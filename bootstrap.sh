@@ -24,7 +24,7 @@ done
 ################################
 
 # grab source files from Makefile
-set -- $(cat Makefile | sed '/OBJS.*=/!d; s/.*=\s*//; s/\.o/\.c/g)
+set -- $(cat Makefile | sed '/OBJS.*=/!d; s/.*=\s*//; s/\.o/\.c/g')
 
 tmp="$@"
 
