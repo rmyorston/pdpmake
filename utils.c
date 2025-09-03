@@ -9,10 +9,20 @@
 static void
 vwarning(FILE *stream, const char *msg, va_list list)
 {
-	if (makefile)
-		fprintf(stream, "%s: (%s:%d): ", myname, makefile, dispno);
-	else
-		fprintf(stream, "%s: ", myname);
+	const char *m = NULL;
+	int d = 0;
+
+	if (curr_cmd) {
+		m = curr_cmd->c_makefile;
+		d = curr_cmd->c_dispno;
+	} else if (makefile) {
+		m = makefile;
+		d = dispno;
+	}
+
+	fprintf(stream, "%s: ", myname);
+	if (m)
+		fprintf(stream, "(%s:%d): ", m, d);
 	vfprintf(stream, msg, list);
 	fputc('\n', stream);
 }

@@ -25,6 +25,7 @@ uint32_t opts;
 const char *myname;
 const char *makefile;
 struct file *makefiles;
+struct cmd *curr_cmd;
 #if ENABLE_FEATURE_MAKE_POSIX_2024
 char *numjobs = NULL;
 #endif

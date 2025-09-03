@@ -348,6 +348,7 @@ addrule(struct name *np, struct depend *dp, struct cmd *cp, int flag)
 {
 	struct rule *rp;
 	struct rule **rpp;
+	struct cmd *old_cp;
 
 #if ENABLE_FEATURE_MAKE_EXTENSIONS
 	// Can't mix single-colon and double-colon rules
@@ -368,7 +369,7 @@ addrule(struct name *np, struct depend *dp, struct cmd *cp, int flag)
 		return;
 	}
 
-	if (cp && !(np->n_flag & N_DOUBLE) && getcmd(np)) {
+	if (cp && !(np->n_flag & N_DOUBLE) && (old_cp = getcmd(np))) {
 		// Handle the inference rule redefinition case
 		// .DEFAULT rule can also be redefined (as an extension).
 		if ((np->n_flag & N_INFERENCE)
@@ -379,7 +380,17 @@ addrule(struct name *np, struct depend *dp, struct cmd *cp, int flag)
 			freerules(np->n_rule);
 			np->n_rule = NULL;
 		} else {
-			error("commands defined twice for target %s", np->n_name);
+			// We're adding commands to a single colon rule which
+			// already has some.  Clear the old ones first.
+			warning("overriding rule for target %s", np->n_name);
+			curr_cmd = old_cp;
+			warning("previous rule for target %s", np->n_name);
+			curr_cmd = NULL;
+
+			for (rp = np->n_rule; rp; rp = rp->r_next) {
+				freecmds(rp->r_cmd);
+				rp->r_cmd = NULL;
+			}
 		}
 	}
 

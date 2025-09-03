@@ -300,6 +300,7 @@ extern struct name *target;
 extern uint32_t opts;
 extern int lineno;
 extern int dispno;
+extern struct cmd *curr_cmd;
 #if ENABLE_FEATURE_MAKE_POSIX_2024
 extern char *numjobs;
 #endif
