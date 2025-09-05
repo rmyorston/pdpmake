@@ -32,7 +32,7 @@ extern char **environ;
 // Resetting getopt(3) is hopelessly platform-dependent.  If command
 // line options don't work as expected you may need to tweak this.
 // The default should work for GNU libc and OpenBSD.
-#if defined(__FreeBSD__) || defined(__NetBSD__)
+#if defined(__APPLE__) || defined(__FreeBSD__) || defined(__NetBSD__)
 # define GETOPT_RESET() do { \
 	extern int optreset; \
 	optind = 1; \
