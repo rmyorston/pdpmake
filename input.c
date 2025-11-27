@@ -314,15 +314,23 @@ expand_macros(const char *str, int except_dollar)
 				if (strcmp(name, "MAKE") == 0)
 					opts |= OPT_make;
 #endif
-				mp->m_flag = TRUE;
-				expval = expand_macros(mp->m_val, FALSE);
-				mp->m_flag = FALSE;
-				modified = modify_words(expval, modifier, lenf, lenr,
-								find_pref, repl_pref, find_suff, repl_suff);
-				if (modified)
-					free(expval);
+#if ENABLE_FEATURE_MAKE_POSIX_2024 || ENABLE_FEATURE_MAKE_EXTENSIONS
+				// Immediate-expansion macros aren't recursively expanded
+				if (mp->m_immediate)
+					modified = xstrdup(mp->m_val);
 				else
-					modified = expval;
+#endif
+				{
+					mp->m_flag = TRUE;
+					expval = expand_macros(mp->m_val, FALSE);
+					mp->m_flag = FALSE;
+					modified = modify_words(expval, modifier, lenf, lenr,
+									find_pref, repl_pref, find_suff, repl_suff);
+					if (modified)
+						free(expval);
+					else
+						modified = expval;
+				}
 			}
 			free(name);
 			free(expfind);

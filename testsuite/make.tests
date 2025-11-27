@@ -233,6 +233,15 @@ target:
 	@echo $(reset)
 '
 
+# Immediate expansion macros aren't expanded recursively.
+testing "Expanding immediate-expansion macro" \
+	"make -f -" \
+	"\$@\n" "" '
+a ::= $$@
+all:
+	@echo '\''$a'\''
+'
+
 # Since GNU make and bmake interpret := macro assignments differently,
 # POSIX has ::= for the GNU variant and :::= for BSD.
 testing "Different styles of := macro assignment" \
