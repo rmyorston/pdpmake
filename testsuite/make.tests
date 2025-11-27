@@ -242,6 +242,15 @@ all:
 	@echo '\''$a'\''
 '
 
+# Suffix substitution in immediate expansion macros
+testing "Suffix substitution in immediate-expansion macro" \
+	"make -f -" \
+	"file.o\n" "" '
+a ::= file.c
+all:
+	@echo $(a:.c=.o)
+'
+
 # Since GNU make and bmake interpret := macro assignments differently,
 # POSIX has ::= for the GNU variant and :::= for BSD.
 testing "Different styles of := macro assignment" \
