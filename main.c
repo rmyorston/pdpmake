@@ -474,6 +474,39 @@ mark_special(const char *special, uint32_t oflag, uint16_t nflag)
 	}
 }
 
+static char *
+get_shell(void)
+{
+	size_t len;
+	char *path, *file;
+	const char *end;
+	struct stat st;
+
+	len = confstr(_CS_PATH, NULL, (size_t)0);
+	path = xmalloc(len);
+	confstr(_CS_PATH, path, len);
+	file = xmalloc(len + 3);
+
+    for (const char *p = path; p; p = end) {
+		end = strchr(p, ':');
+		if (end == NULL)
+			len = strlen(p);
+		else
+			len = end++ - p;
+
+		memcpy(file, p, len);
+		strcpy(file + len, "/sh");
+
+		if (!access(file, X_OK) && !stat(file, &st) && S_ISREG(st.st_mode)) {
+			free(path);
+			return file;
+		}
+	}
+	free(path);
+	free(file);
+	return xstrdup("/bin/sh");
+}
+
 int
 main(int argc, char **argv)
 {
@@ -482,7 +515,7 @@ main(int argc, char **argv)
 #else
 	const char *path = "make";
 #endif
-	char **fargv, **fargv0;
+	char **fargv, **fargv0, *shell;
 	int fargc, estat;
 	bool found_target;
 	FILE *ifd;
@@ -567,7 +600,9 @@ main(int argc, char **argv)
 	// Read built-in rules
 	input(NULL, 0);
 
-	setmacro("SHELL", "/bin/sh", 4);
+	shell = get_shell();
+	setmacro("SHELL", shell, 4);
+	free((void *)shell);
 	setmacro("MAKE", path, 4);
 #if ENABLE_FEATURE_MAKE_POSIX_2024
 	if (!POSIX_2017) {
